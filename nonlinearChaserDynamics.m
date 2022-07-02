@@ -5,7 +5,7 @@ classdef nonlinearChaserDynamics
         mu_GM = 398600.4;
     end
     methods (Static)
-        function traj = ChaserMotion(traj0,R,u)
+        function traj = ChaserMotion(t,traj0,R,u)
             %{
                 Constants:
                 -----------
@@ -14,7 +14,8 @@ classdef nonlinearChaserDynamics
                 ----------
                     traj0 = initial trajectory
                     R = orbital radius of the chaser spacecraft
-                    u = external thrusters [ux,uy,uz]
+                    u = external thrusters [ux,uy,uz]. modeled as a
+                    function
                 Returns:
                 --------
                     [xdot,ydot,zdot,xdotdot,ydotdot,zdotdot] = HUGE matrix of 6 functions.
@@ -33,9 +34,11 @@ classdef nonlinearChaserDynamics
             y = traj0(2);
             z = traj0(3);
             
-            ux = u(1);
-            uy = u(2);
-            uz = u(3);
+            ut = u(t); %function
+            ux = ut(1); %indexing thrusters
+            uy = ut(2);
+            uz = ut(3);
+
             n = sqrt(mu_GM / (R.^3)); %orbital velocity
         
             %distance formula on chaser orbital radius ^3
@@ -53,10 +56,20 @@ classdef nonlinearChaserDynamics
             traj = [xdot;ydot;zdot;xdotdot;ydotdot;zdotdot];
         end
         function [ts,trajs] = simulateMotion(traj0,R,u,T)
-            f = @(t,traj) nonlinearChaserDynamics.ChaserMotion(traj,R,u);
+            f = @(t,traj) nonlinearChaserDynamics.ChaserMotion(t,traj,R,u);
             t0 = 0;
             [ts,trajs] = ode45(f,[t0,T], traj0);
 
+        end
+        function noisy_trajs = noisifyMotion(trajs, noise_model)
+            [n_traj, dim_traj] = size(trajs);
+            noisy_trajs = trajs;
+            acc_noise = zeros([1,dim_traj]); %accumulated noise
+            for i = 1:n_traj
+                acc_noise = acc_noise + noise_model(); %make sure that system noise is consistent.
+                noisy_trajs(i,:) = trajs(i,:) + acc_noise; 
+            end
+            %noisy_trajs is returned
         end
     end
 end
