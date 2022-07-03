@@ -1,5 +1,8 @@
 classdef ChaserEKF
     properties (Constant)
+        %continuous EKF
+        %this one takes ode45 to integrate
+
     end
     methods (Static)
         function [x_pred, cov_pred] = predict(pred_f,gpred_f, B, x_k, u_k, cov_k, R)
@@ -18,3 +21,14 @@ classdef ChaserEKF
         end
     end
 end
+
+%{
+    arctan(y/x) partials
+    partial X = -y/(x^2+y^2)
+    partial Y = x/(x^2+y^2)
+    partial Z -> partial Zdot = 0
+
+    arcsin(z/rho) partialsp
+
+    
+%}

@@ -1,5 +1,8 @@
 classdef ChaserKF
+    %This is actually an EKF, because we are taking the gradient of the
+    %sensor function.
     properties (Constant)
+
     end
     methods (Static)
         function [x_pred, cov_pred] = predict(A,B,x_k, u_k, cov_k, R)
