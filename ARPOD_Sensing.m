@@ -30,5 +30,45 @@ classdef ARPOD_Sensing
             end
             %noisy_trajs is returned
         end
+        function z_t = measure(state)
+            x = state(1);
+            y = state(2);
+            z = state(3);
+            
+            norm = sqrt(x*x+y*y+z*z);
+            e1 = atan(y/x);
+            e2 = asin(z/norm);
+            e3 = norm;
+            z_t = [e1;e2;e3];
+        end
+        function jacobian = jacobianMeasurement(x,y,z)
+            jacobian = zeros(3,6);
+            %dArctan
+            partialX = -y/(x*x+y*y);
+            partialY = x/(x*x+y*y);
+            jacobian(1,1) = partialX;
+            jacobian(1,2) = partialY;
+            %rest of the partials are zero so it doesn't matter anyways.
+
+            %dArcsin
+            norm = sqrt( (x*x+y*y)/(x*x+y*y+z*z) ) + (x*x+y*y+z*z).^(3/2);
+            partialX = x*z/norm;
+            partialY = -y*z/norm;
+            partialZ = sqrt( (x*x+y*y)/(x*x+y*y+z*z) ) / sqrt(x*x+y*y+z*z);
+            jacobian(2,1) = partialX;
+            jacobian(2,2) = partialY;
+            jacobian(2,3) = partialZ;
+
+            %drho
+            norm = sqrt(x*x+y*y+z*z);
+            partialX = x/norm;
+            partialY = y/norm;
+            partialZ = z/norm;
+            jacobian(3,1) = partialX;
+            jacobian(3,2) = partialY;
+            jacobian(3,3) = partialZ;
+
+            %return jacobian
+        end
     end
 end

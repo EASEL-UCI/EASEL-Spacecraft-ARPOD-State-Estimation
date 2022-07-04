@@ -49,7 +49,7 @@ classdef nonlinearChaserDynamics
             ydot = traj0(5);
             zdot = traj0(6);
             xdotdot = 2*n*ydot + n*n*(R+x) - mu_GM*(R+x)/const + ux;
-            ydotdot = 2*n*xdot + n*n*y - mu_GM*y/const + uy;
+            ydotdot = -2*n*xdot + n*n*y - mu_GM*y/const + uy;
             zdotdot = -mu_GM*z/const + uz;
         
             %return
@@ -65,7 +65,7 @@ classdef nonlinearChaserDynamics
             [n_traj, dim_traj] = size(trajs);
             noisy_trajs = trajs;
             acc_noise = zeros([1,dim_traj]); %accumulated noise
-            for i = 1:n_traj
+            for i = 2:n_traj
                 acc_noise = acc_noise + noise_model(); %make sure that system noise is consistent.
                 noisy_trajs(i,:) = trajs(i,:) + acc_noise; 
             end

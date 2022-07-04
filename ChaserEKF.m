@@ -1,34 +1,48 @@
 classdef ChaserEKF
-    properties (Constant)
-        %continuous EKF
-        %this one takes ode45 to integrate
+    %{
+        This is the discrete HCW EKF
+        Prediction is based on discrete matrices Ax+Bu
+        Measurement is based on using jacobian with nonlinear functions.
 
+        x_t+1 = Ax_t + Bu_t
+        c_t = h(x_t)
+    %}
+    properties (Constant)
+        %
+        mu_GM = 398600.4; %km^2/s^2;
     end
     methods (Static)
-        function [x_pred, cov_pred] = predict(pred_f,gpred_f, B, x_k, u_k, cov_k, R)
-            x_pred = pred_f(x_k) + B*u_k;
-            G = gpred_f(x_k,u_k);
-            cov_pred = G*cov_k*transpose(G) + R;
+        function [state,cov] = prediction(state0, cov0, u0, T, R, systemCov)
+            n = sqrt(ChaserEKF.mu_GM / (R.^3) );
+            A = zeros(6,6);
+            B = zeros(6,3);
+            S = sin(n * T);
+            C = cos(n * T);
+
+            A(1,:) = [4-3*C,0,0,S/n,2*(1-C)/n,0];
+            A(2,:) = [6*(S-n*T),1,0,-2*(1-C)/n,(4*S-3*n*T)/n,0];
+            A(3,:) = [0,0,C,0,0,S/n];
+            A(4,:) = [3*n*S,0,0,C,2*S,0];
+            A(5,:) = [-6*n*(1-C),0,0,-2*S,4*C-3,0];
+            A(6,:) = [0,0,-n*S,0,0,C];
+
+            B(1,:) = [(1-C)/(n*n),(2*n*T-2*S)/(n*n),0];
+            B(2,:) = [-(2*n*T-2*S)/(n*n),(4*(1-C)/(n*n))-(3*T*T/2),0]; 
+            B(3,:) = [0,0,(1-C)/(n*n)];
+            B(4,:) = [S/n,2*(1-C)/n, 0];
+            B(5,:) = [-2*(1-C)/n,(4*S/n) - (3*T),0];
+            B(6,:) = [0,0,S/n];
+
+            state = A*state0 + B*u0;
+            cov = A*cov0*transpose(A) + systemCov;
         end
-        function [z_meas,K_gain] = convertMeas(fMeas, gfMeas, c, cov_pred)
-            z_meas = fMeas(c);
-            H = gfMeas(c);
-            K_gain = cov_pred*tranpose(H)*inv(H*cov_pred*transpose(H)+Q);
-        end
-        function [x_next, cov_next] = correct(x_pred, cov_pred, c,z_meas, K_gain)
-            x_next = x_pred + K_gain*(c - z_meas);
-            cov_next = (eye - K_gain*H)*cov_pred;
+        function [state,cov] = estimate(state_t,cov_t,u_t,T,R,z_t,systemCov,measCov)
+            [state_pred, cov_pred] = ChaserEKF.prediction(state_t,cov_t,u_t,T,R,systemCov);
+            H = ARPOD_Sensing.jacobianMeasurement(state_pred(1),state_pred(2),state_pred(3)); %jacobian matrix
+            K_gain = cov_pred*transpose(H)*inv(H*cov_pred*transpose(H) + measCov);
+
+            state = state_pred + K_gain*(z_t-ARPOD_Sensing.measure(state_pred));
+            cov = (eye(6) - K_gain*H)*cov_pred;
         end
     end
 end
-
-%{
-    arctan(y/x) partials
-    partial X = -y/(x^2+y^2)
-    partial Y = x/(x^2+y^2)
-    partial Z -> partial Zdot = 0
-
-    arcsin(z/rho) partialsp
-
-    
-%}
