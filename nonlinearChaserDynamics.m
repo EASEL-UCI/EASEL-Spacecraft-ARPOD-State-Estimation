@@ -61,6 +61,34 @@ classdef nonlinearChaserDynamics
             [ts,trajs] = ode45(f,[t0,T], traj0);
 
         end
+        function jacobianMat = ChaserJacobian(t,traj0,R,u)
+            mu_GM = nonlinearChaserDynamics.mu_GM;
+            n = sqrt(mu_GM / (R.^3)); %orbital velocity
+            x = traj0(1);
+            y = traj0(2);
+            z = traj0(3);
+
+            jacobianMat = zeros(6,6);
+
+            jacobianMat(1,4) = 1;
+            jacobianMat(2,5) = 1;
+            jacobianMat(3,6) = 1;
+
+            norm = ( (R+x).^2 + y*y + z*z ).^(5/2);
+            jacobianMat(4,1) = n*n - mu_GM*((-2*R*R)-4*R*x-2*x*x+y*y+z*z)/norm;
+            jacobianMat(4,2) = mu_GM*(3*y*(R+x))/norm;
+            jacobianMat(4,3) = mu_GM*(3*z*(R+x))/norm;
+            jacobianMat(4,5) = 2*n;
+
+            jacobianMat(5,1) = mu_GM*(3*y*(R+x))/norm;
+            jacobianMat(5,2) = n*n - mu_GM*(R*R + 2*R*x + x*x - 2*y*y + z*z) / norm;
+            jacobianMat(5,3) = mu_GM * 3*y*z/norm;
+            jacobianMat(5,4) = -2*n;
+
+            jacobianMat(6,1) = mu_GM*3*z*(R+x)/norm;
+            jacobianMat(6,2) = mu_GM*3*y*z/norm;
+            jacobianMat(6,3) = -mu_GM*(R*R+2*R*x+x*x+y*y-2*z*z)/norm;
+        end
         function noisy_trajs = noisifyMotion(trajs, noise_model)
             [n_traj, dim_traj] = size(trajs);
             noisy_trajs = trajs;

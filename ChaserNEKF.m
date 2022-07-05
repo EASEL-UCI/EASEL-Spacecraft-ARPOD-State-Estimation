@@ -4,7 +4,7 @@ classdef ChaserNEKF
         Prediction is based on discrete matrices Ax+Bu
         Measurement is based on using jacobian with nonlinear functions.
 
-        x_t+1 = Ax_t + Bu_t
+        x_t+1 = f(x_t,u_t)
         c_t = h(x_t)
     %}
     properties (Constant)
