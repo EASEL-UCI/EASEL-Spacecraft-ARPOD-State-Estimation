@@ -55,11 +55,13 @@ classdef nonlinearChaserDynamics
             %return
             traj = [xdot;ydot;zdot;xdotdot;ydotdot;zdotdot];
         end
-        function [ts,trajs] = simulateMotion(traj0,R,u,T)
+        function [ts,trajs] = simulateMotion(traj0,R,u,T,timestep)
             f = @(t,traj) nonlinearChaserDynamics.ChaserMotion(t,traj,R,u);
-            t0 = 0;
-            [ts,trajs] = ode45(f,[t0,T], traj0);
-
+            if timestep==0
+                [ts,trajs] = ode45(f,0:T, traj0);
+            else
+                [ts,trajs] = ode45(f,0:timestep:T, traj0);
+            end
         end
         function jacobianMat = ChaserJacobian(t,traj0,R,u)
             mu_GM = nonlinearChaserDynamics.mu_GM;
