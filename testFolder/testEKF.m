@@ -24,7 +24,7 @@ estimatedTraj = zeros(6,n_traj);
 estimatedTraj(:,1) = state0;
 for i = 2:length(ts)
     T = ts(i) - ts(i-1);
-    [est_state, est_cov] = ChaserEKF.estimate(estimatedTraj(:,i-1), estimatedTrajCov(:,:,i-1), [0;0;0], T, R, sense_data(:,i), 0.001*eye(6), eye(3));
+    [est_state, est_cov] = ChaserEKF.estimate(estimatedTraj(:,i-1), estimatedTrajCov(:,:,i-1), [0;0;0], T, R, sense_data(:,i), 1*eye(6), 0.1*eye(3));
     estimatedTraj(:,i) = est_state;
     estimatedTrajCov(:,:,i) = est_cov;
 end

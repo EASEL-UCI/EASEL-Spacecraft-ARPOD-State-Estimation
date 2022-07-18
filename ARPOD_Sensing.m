@@ -30,7 +30,7 @@ classdef ARPOD_Sensing
             end
             %noisy_trajs is returned
         end
-        function z_t = measure(state)
+        function z_t = measure(state) %add flags for measurement
             x = state(1);
             y = state(2);
             z = state(3);
@@ -51,8 +51,8 @@ classdef ARPOD_Sensing
             %rest of the partials are zero so it doesn't matter anyways.
 
             %dArcsin
-            norm = sqrt( (x*x+y*y)/(x*x+y*y+z*z) ) + (x*x+y*y+z*z).^(3/2);
-            partialX = x*z/norm;
+            norm = sqrt( (x*x+y*y)/(x*x+y*y+z*z) ) * (x*x+y*y+z*z).^(3/2);
+            partialX = -x*z/norm;
             partialY = -y*z/norm;
             partialZ = sqrt( (x*x+y*y)/(x*x+y*y+z*z) ) / sqrt(x*x+y*y+z*z);
             jacobian(2,1) = partialX;
