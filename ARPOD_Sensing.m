@@ -67,5 +67,39 @@ classdef ARPOD_Sensing
 
             %return jacobian
         end
+        function jacobian = jacobianPartner(x,y,z,r)
+            rx = r(1);
+            ry = r(2);
+            rz = r(3);
+
+            jacobian = zeros(3,6);
+            %dArctan
+            partialX = (ry-y)/(ry*ry - 2*ry*y + rx*rx - 2*rx*x + x*x + y*y);
+            partialY = (x-rx)/(ry*ry - 2*ry*y + rx*rx - 2*rx*x + x*x + y*y);
+            jacobian(1,1) = partialX;
+            jacobian(1,2) = partialY;
+            %rest of the partials are zero so it doesn't matter anyways.
+
+            %dArcsin
+            bignorm = sqrt(1 - (rz-z).^2 / (rx-x).^2 + (ry-y).^2 + (rz-z).^2);
+            norm = ((rx-x).^2 + (ry-y).^2 + (rz-z).^2).^(3/2) * bignorm;
+            partialX = (rx-x)*(rz-z)/norm;
+            partialY = (ry-y)*(rz-z)/norm;
+            partialZ = (-rx*rx + 2*rx*x - ry*ry + 2*ry*y - rx*rx - ry*ry) / sqrt(x*x+y*y+z*z);
+            jacobian(2,1) = partialX;
+            jacobian(2,2) = partialY;
+            jacobian(2,3) = partialZ;
+
+            %drho
+            norm = sqrt((rx-x).^2 + (ry-y).^2 + (rz-z).^2);
+            partialX = -(rx-x)/norm;
+            partialY = -(ry-y)/norm;
+            partialZ = -(rz-z)/norm;
+            jacobian(3,1) = partialX;
+            jacobian(3,2) = partialY;
+            jacobian(3,3) = partialZ;
+
+            %return jacobian
+        end
     end
 end
