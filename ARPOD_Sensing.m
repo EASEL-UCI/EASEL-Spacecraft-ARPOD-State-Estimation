@@ -2,9 +2,6 @@
 %3DOF ARPOD sensing model
 %assumes the trajectories are size 6 with position and their derivatives.
 classdef ARPOD_Sensing
-    properties (Constant)
-
-    end
     methods (Static)
         function sense_data = convertTrajs(trajs)
             [n_traj, dim_traj] = size(trajs);
