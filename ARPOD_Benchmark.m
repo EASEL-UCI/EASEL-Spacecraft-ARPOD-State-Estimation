@@ -18,6 +18,25 @@ classdef ARPOD_Benchmark
         % can choose to add noise separately
     end
     methods (Static)
+        function phase = calculatePhase(traj, reached)
+            norm = traj(:,1:3);
+            norm = sqrt(norm.^2);
+            if (reached == 0)
+                if (norm > 1)
+                    % ARPOD phase 1: Rendezvous w/out range
+                    phase = 1;
+                elseif (norm > 0.1) 
+                    % ARPOD phase 2: Rendezvous with range
+                    phase = 2;
+                else 
+                    %ARPOD phase 3: Docking
+                    phase = 3;
+                end
+            else
+                % ARPOD phase 4: Rendezvous to new location
+                phase = 4;
+            end
+        end
         function traj = nextStep(traj0, u, timestep, noise, options)
             if (options == 1)
                 % discrete control input
