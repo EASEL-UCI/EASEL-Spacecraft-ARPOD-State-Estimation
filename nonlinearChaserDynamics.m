@@ -1,9 +1,6 @@
 % gravitational constant in km^2/s^2 from chance-constr MPC
 
 classdef nonlinearChaserDynamics
-    properties (Constant)
-        mu_GM = 398600.4;
-    end
     methods (Static)
         function traj = ChaserMotion(t,traj0,R,u)
             %{
@@ -29,7 +26,7 @@ classdef nonlinearChaserDynamics
                     zotzotzot hehe.
             %}
             %traj is [x,y,z,xdot,ydot,zdot]
-            mu_GM = nonlinearChaserDynamics.mu_GM;
+            mu_GM = ARPOD_Benchmark.mu;
             x = traj0(1);
             y = traj0(2);
             z = traj0(3);
@@ -58,7 +55,7 @@ classdef nonlinearChaserDynamics
         function [ts,trajs] = simulateMotion(traj0,R,u,T,timestep)
             f = @(t,traj) nonlinearChaserDynamics.ChaserMotion(t,traj,R,u);
             if timestep==0
-                [ts,trajs] = ode45(f,0:T, traj0);
+                [ts,trajs] = ode45(f,[0,T], traj0);
             else
                 [ts,trajs] = ode45(f,0:timestep:T, traj0);
             end

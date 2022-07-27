@@ -36,12 +36,13 @@ classdef ChaserEKF
             state = A*state0 + B*u0;
             cov = A*cov0*transpose(A) + systemCov;
         end
-        function [state,cov] = estimate(state_t,cov_t,u_t,T,R,z_t,systemCov,measCov)
+        function [state,cov] = estimate(state_t,cov_t,u_t,T,R,z_t,systemCov,measCov, phase)
             [state_pred, cov_pred] = ChaserEKF.prediction(state_t,cov_t,u_t,T,R,systemCov);
-            H = ARPOD_Sensing.jacobianMeasurement(state_pred(1),state_pred(2),state_pred(3)); %jacobian matrix
+            H = ARPOD_Benchmark.jacobianSensor(state_pred,phase, ARPOD_Benchmark.x_partner);
             K_gain = cov_pred*transpose(H)*inv(H*cov_pred*transpose(H) + measCov);
 
-            state = state_pred + K_gain*(z_t-ARPOD_Sensing.measure(state_pred));
+            measure = ARPOD_Benchmark.sensor(state_pred, @() [0;0;0], phase);
+            state = state_pred + K_gain*(z_t-measure);
             cov = (eye(6) - K_gain*H)*cov_pred;
         end
     end

@@ -3,11 +3,14 @@ classdef ARPOD_Benchmark
         t_e = 14400; % eclipse time (in seconds)
         t_f = 43200; % total mission duration (in seconds)
         rho_r = 1; % maximum distance for range measurements (1 km)
+        %rho_r = 50;
         rho_d = 0.1; % docking phase initial radius (0.1 km)
+        %rho_d = 25;
         m_t = 2000; % mass of target (2000 kg)
         m_c = 500; % mass of chaser (500 kg)
         mu = 398600.4; %earth's gravitational constant (in km^3/s^2)
         a = 42164; % semi-major axis of GEO (42164 km)
+        %a = 1000;
         Vbar = 5 * 10.^(-5); % max closing velocity while docking (in km/s)
         theta = 60; % LOS Constraint angle (in degrees)
         c = [-1;0;0]; % LOS cone direction
@@ -19,13 +22,13 @@ classdef ARPOD_Benchmark
     end
     methods (Static)
         function phase = calculatePhase(traj, reached)
-            norm = traj(:,1:3);
+            norm = traj(1:3,:);
             norm = sqrt(norm.^2);
             if (reached == 0)
-                if (norm > 1)
+                if (norm > ARPOD_Benchmark.rho_r)
                     % ARPOD phase 1: Rendezvous w/out range
                     phase = 1;
-                elseif (norm > 0.1) 
+                elseif (norm > ARPOD_Benchmark.rho_d) 
                     % ARPOD phase 2: Rendezvous with range
                     phase = 2;
                 else 
@@ -41,36 +44,56 @@ classdef ARPOD_Benchmark
             if (options == 1)
                 % discrete control input
                 u0 = @(t) u;
-                [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a, u0, timestep, timestep);
-                traj = trajs(2,:);
+                [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a, u0, timestep, 0);
+                traj = trajs(length(ts),:);
             elseif (options == 2)
                 % discrete impulsive control input
                 % To be Implemented
                 disp('it is not implemented!. What are you doing?');
             elseif (options == 3)
                 % continuous control input
-                [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a, u,timestep,timestep);
-                traj = trajs(2,:);
+                [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a, u,timestep, 0);
+                traj = trajs(length(ts),:);
             end
             traj = traj + noise();
         end
         function sensor = sensor(state, noise, options)
             if (options == 1)
                 %phase 1: only using bearing measurements
-                sensor = ARPOD.measure(state);
+                sensor = ARPOD_Sensing.measure(state);
                 sensor = sensor(1:2,:);
+                w = noise();
+                v = w(1:2,:);
             elseif (options == 2)
                 %phase 2: bearing measurements + range measurement
-                sensor = ARPOD.measure(state);
+                sensor = ARPOD_Sensing.measure(state);
+                v = noise();
             elseif (options == 3)
                 %phase 3: same as phase 2
-                sensor = ARPOD.measure(state);
+                sensor = ARPOD_Sensing.measure(state);
+                v = noise();
             elseif (options == 4)
                 %phase 4: relative phase 2 to partner spacecraft
                 r = ARPOD_Benchmark.x_partner - [state(1);state(2);state(3)]; % relative position to partner spacecraft
-                sensor = ARPOD.measure(r);
+                sensor = ARPOD_Sensing.measure(r);
+                v = noise();
             end
-            sensor = sensor + noise();
+            sensor = sensor + v;
+        end
+        function jacobian = jacobianSensor(state, options, r)
+            x = state(1);
+            y = state(2);
+            z = state(3);
+            if (options == 1)
+                jacobian = ARPOD_Sensing.jacobianMeasurement(x,y,z);
+                jacobian = jacobian(1:2,:);
+            elseif (options == 2)
+                jacobian = ARPOD_Sensing.jacobianMeasurement(x,y,z);
+            elseif (options == 3)
+                jacobian = ARPOD_Sensing.jacobianMeasurement(x,y,z);
+            elseif (options == 4)
+                jacobian = ARPOD_Sensing.jacobianPartner(x,y,z,r);
+            end
         end
     end
 end
