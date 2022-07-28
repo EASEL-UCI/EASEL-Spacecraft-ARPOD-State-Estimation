@@ -18,7 +18,6 @@ record_phases = zeros(1,N-1);
 sensor_cov = 1000*[1,0,0;0,1,0;0,0,0.01];
 process_cov = 1*eye(6);
 for i = 2:N
-    disp(i)
     phase = ARPOD_Benchmark.calculatePhase(x.', 0);
     record_phases(:,i-1) = phase;
 
