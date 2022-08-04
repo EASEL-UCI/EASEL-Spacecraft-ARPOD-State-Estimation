@@ -21,6 +21,22 @@ classdef ARPOD_Benchmark
         % can choose to add noise separately
     end
     methods (Static)
+        function inLOS = isInsideLOS(traj)
+            theta = ARPOD_Benchmark.theta * pi / 180; %docking angle in radians
+            rho_d = ARPOD_Benchmark.rho_d;
+            c = rho_d * ARPOD_Benchmark.c;
+            rho = [traj(1),traj(2),traj(3)];
+            
+            dot = (rho.' * c) / (norm(rho)*norm(c));
+            disp(dot)
+            if (dot(1) >= cos(theta/2))
+                % within LOS
+                inLOS = 1;
+            else
+                % not within LOS
+                inLOS = 0;
+            end
+        end
         function phase = calculatePhase(traj, reached)
             norm = traj(1:3,:);
             norm = sqrt(norm.^2);
@@ -28,7 +44,7 @@ classdef ARPOD_Benchmark
                 if (norm > ARPOD_Benchmark.rho_r)
                     % ARPOD phase 1: Rendezvous w/out range
                     phase = 1;
-                elseif (norm > ARPOD_Benchmark.rho_d) 
+                elseif ( (norm > ARPOD_Benchmark.rho_d) && (ARPOD_Benchmark.isInsideLOS(traj) == 0) ) 
                     % ARPOD phase 2: Rendezvous with range
                     phase = 2;
                 else 
