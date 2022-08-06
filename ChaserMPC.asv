@@ -109,7 +109,7 @@ classdef ChaserMPC
             if phase == 2
                 theta1 = ARPOD_Benchmark.theta * pi / 180;
                 theta2 = theta1;
-
+                
             elseif phase == 3
                 %LOS Matrix
                 theta1 = ARPOD_Benchmark.theta * pi / 180;
@@ -146,9 +146,9 @@ classdef ChaserMPC
             end
             % return xs and us
         end
-        function [xs,us] = optimizeNonlinear()
+        function us = optimizeNonlinear()
         end
-        function u = mpc_estimate(phase, options)
+        function u = mpc_estimate()
             
         end
     end

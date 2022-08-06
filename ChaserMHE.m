@@ -70,7 +70,7 @@ classdef ChaserMHE
                 wt = x(6*N+1:12*N,:);
                 vt = x(12*N+1:(12+meas_size)*N,:);
 
-                ceq = zeros(3*N+6*N+6,1);
+                ceq = zeros(meas_size*N+6*N+6,1);
                 for i = 1:N
                     xi = xt(6*(i-1)+1:6*i,:);
                     if i < N

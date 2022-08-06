@@ -73,22 +73,22 @@ classdef ARPOD_Benchmark
             end
             traj = traj + noise();
         end
-        function sensor = sensor(state, noise, options)
-            if (options == 1)
+        function sensor = sensor(state, noise, phase)
+            if (phase == 1)
                 %phase 1: only using bearing measurements
                 sensor = ARPOD_Sensing.measure(state);
                 sensor = sensor(1:2,:);
                 w = noise();
                 v = w(1:2,:);
-            elseif (options == 2)
+            elseif (phase == 2)
                 %phase 2: bearing measurements + range measurement
                 sensor = ARPOD_Sensing.measure(state);
                 v = noise();
-            elseif (options == 3)
+            elseif (phase == 3)
                 %phase 3: same as phase 2
                 sensor = ARPOD_Sensing.measure(state);
                 v = noise();
-            elseif (options == 4)
+            elseif (phase == 4)
                 %phase 4: relative phase 2 to partner spacecraft
                 r = ARPOD_Benchmark.x_partner - [state(1);state(2);state(3)]; % relative position to partner spacecraft
                 sensor = ARPOD_Sensing.measure(r);
