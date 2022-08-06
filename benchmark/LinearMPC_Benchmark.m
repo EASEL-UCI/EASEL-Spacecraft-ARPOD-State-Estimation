@@ -9,7 +9,6 @@
 
             Graph should give the estimated trajectory 
         
-        TODO: Run Linear MPC from the ChaserMPC
         TODO: Run EKF
         TODO: Run PF
         TODO: Run MHE
@@ -18,20 +17,19 @@
         ----------------
            - Thruster Options
            - Discrete/Cont/Impulsive Choice
-           - State estimation Option
+           - State estimation Option6
 %}
 
 %initial parameters
-traj = [-100;-100;-100;100;100;100];
+traj = [-100;-100;-100;0;0;0];
 total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-mpc_horizon = 25; % set linear mpc horizon
 tstep = 1; % update every second
 phase = 1;
 scale_sensorNoise = 0.1;
 scale_dynamicNoise = 0.001;
 
 %MPC parameters
-mpc_horizon = 25;
+mpc_horizon = 100;
 scale_mpcQ = 100;
 scale_mpcR = 1;
 mpc_Q = scale_mpcQ*[10,0,0,0,0,0;
@@ -47,6 +45,7 @@ mpc_R = scale_mpcR*eye(3);
     -----------------------
         1: Extended Kalman Filter
         2: Particle Filter
+        3: Moving Horizon Estimator
 %}
 stateEstimator = 1;
 
@@ -67,7 +66,7 @@ stats.initBenchmark(traj);
 sense = ARPOD_Benchmark.sensor(traj, @() [0;0], phase);
 
 
-[xs,us] = ChaserMPC.optimizeLinear(traj,mpc_Q,mpc_R,mpc_horizon,tstep,1);
+[xs,us] = ChaserMPC.optimizeLinear(traj,mpc_Q,mpc_R,mpc_horizon,tstep,1, 0.01);
 
 %{
 for i = 1+tstep:tstep:total_time

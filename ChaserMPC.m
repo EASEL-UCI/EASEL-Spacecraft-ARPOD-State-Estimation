@@ -63,6 +63,7 @@ classdef ChaserMPC
                     end
                 end
 
+                Aeq = [Aeq;row];
                 %setting up the x0 = xbar0 to ensure first term doesn't
                 %change
                 if i == 1
@@ -70,19 +71,14 @@ classdef ChaserMPC
                 else
                     row0 = [row0, zeros(6,6), zeros(6,3)];
                 end
-                %disp(size(Aeq));
-                %disp(size(row0));
-                %disp(i);
-                %disp("break");
-                Aeq = [Aeq;row];
             end
             row0 = [row0, zeros(6,6)];
             Aeq = [Aeq;row0];
             [m,n] = size(Aeq);
             beq = zeros(m,1);
-            beq(1:6,:) = traj0;
+            beq(m-5:m,:) = traj0;
         end
-        function [ub,lb] = setupControlInputBoundaries(n_horizon)
+        function [ub,lb] = setupControlInputBoundaries(n_horizon, mass)
             %{
                 Parameters:
                 ------------
@@ -94,12 +90,11 @@ classdef ChaserMPC
                     ub and lb are specifically made for MATLAB's
                     optimization functions.
             %}
-            ubar = ARPOD_Benchmark.ubar;
+            ubar = ARPOD_Benchmark.ubar / mass;
             ub = [];
             lb = [];
             for i = 1:n_horizon-1
-                ub = [ub; inf;inf;inf;inf;inf;inf];
-                ub = [ub; ubar;ubar;ubar];
+                ub = [ub; inf;inf;inf;inf;inf;inf;ubar;ubar;ubar];
             end
             ub = [ub; inf;inf;inf;inf;inf;inf];
             lb = -ub;
@@ -171,7 +166,7 @@ classdef ChaserMPC
                 end
             end
         end
-        function [xs,us] = optimizeLinear(traj0, Q, R, n_horizon, tstep, phase)
+        function [xs,us] = optimizeLinear(traj0, Q, R, n_horizon, tstep, phase, mass)
             %{
                 Parameters:
                 ------------
@@ -202,7 +197,7 @@ classdef ChaserMPC
             [Aeq, beq] = ChaserMPC.setupLinearConstraints(traj0, tstep, n_horizon);
 
             %setting up bound constraints
-            [ub,lb] = ChaserMPC.setupControlInputBoundaries(n_horizon);
+            [ub,lb] = ChaserMPC.setupControlInputBoundaries(n_horizon, mass);
 
             % phase 2: only ensure last horizon reaches LOS
             % phase 3: all states are in LOS + velocities are bounded.

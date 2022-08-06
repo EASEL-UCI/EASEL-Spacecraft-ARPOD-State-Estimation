@@ -63,9 +63,11 @@ classdef ARPOD_Benchmark
                 [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a, u0, timestep, 0);
                 traj = trajs(length(ts),:);
             elseif (options == 2)
-                % discrete impulsive control input
-                % To be Implemented
-                disp('it is not implemented!. What are you doing?');
+                % discrete impulsive control input. instantaneous change in
+                % velocity.
+                traj0 = traj0 + [0;0;0;u];
+                [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a,@() [0;0;0], timestep, 0);
+                traj = trajs(length(ts),:);
             elseif (options == 3)
                 % continuous control input
                 [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a, u,timestep, 0);
