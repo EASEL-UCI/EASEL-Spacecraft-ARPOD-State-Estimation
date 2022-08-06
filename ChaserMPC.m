@@ -27,12 +27,13 @@ classdef ChaserMPC
             f = zeros(ndim,1);
             H = sparse(diag(H));
         end
-        function [Aeq, beq] = setupLinearConstraints(traj0, tstep)
+        function [Aeq, beq] = setupLinearConstraints(traj0, tstep, n_horizon)
             %{
                 Parameters:
                 ------------
                     traj0: initial trajectory
                     tstep: scalar timestep in seconds
+                    n_horizon: scalar horizon that spans MPC
                 Description:
                 ------------
                     Setups the equality constraints of MPC
@@ -43,7 +44,6 @@ classdef ChaserMPC
             %setting up equality constraint (dynamics)
             [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
             Aeq = [];
-            beq = zeros(9*n_horizon-3,1);
             row0 = [];
             for i = 1:n_horizon-1
                 row = [];
@@ -51,7 +51,11 @@ classdef ChaserMPC
                     if j == i
                         row = [row, A,B];
                     elseif j == i+1
-                        row = [row, -eye(6), zeros(6,3)];
+                        if i ~= n_horizon-1
+                            row = [row, -eye(6), zeros(6,3)];
+                        else
+                            row = [row, -eye(6)];
+                        end
                     elseif j == n_horizon
                         row = [row, zeros(6,6)];
                     else
@@ -62,15 +66,21 @@ classdef ChaserMPC
                 %setting up the x0 = xbar0 to ensure first term doesn't
                 %change
                 if i == 1
-                    row0 = [row, eye(6), zeros(6,3)];
+                    row0 = [row0, eye(6), zeros(6,3)];
                 else
-                    row0 = [row, zeros(6,6), zeros(6,3)];
+                    row0 = [row0, zeros(6,6), zeros(6,3)];
                 end
-
+                %disp(size(Aeq));
+                %disp(size(row0));
+                %disp(i);
+                %disp("break");
                 Aeq = [Aeq;row];
             end
+            row0 = [row0, zeros(6,6)];
             Aeq = [Aeq;row0];
-            beq(9*n_horizon-5:9*n_horizon) = traj0;
+            [m,n] = size(Aeq);
+            beq = zeros(m,1);
+            beq(1:6,:) = traj0;
         end
         function [ub,lb] = setupControlInputBoundaries(n_horizon)
             %{
@@ -189,7 +199,7 @@ classdef ChaserMPC
 
 
             %setting up equality constraint (dynamics)
-            [Aeq, beq] = ChaserMPC.setupLinearConstraints(traj0, tstep);
+            [Aeq, beq] = ChaserMPC.setupLinearConstraints(traj0, tstep, n_horizon);
 
             %setting up bound constraints
             [ub,lb] = ChaserMPC.setupControlInputBoundaries(n_horizon);

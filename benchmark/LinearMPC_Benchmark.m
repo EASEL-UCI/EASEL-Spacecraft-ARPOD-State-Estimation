@@ -25,11 +25,22 @@
 traj = [-100;-100;-100;100;100;100];
 total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
 mpc_horizon = 25; % set linear mpc horizon
-mhe_horizon = 25; % set nonlinear mhe horizon
 tstep = 1; % update every second
 phase = 1;
 scale_sensorNoise = 0.1;
 scale_dynamicNoise = 0.001;
+
+%MPC parameters
+mpc_horizon = 25;
+scale_mpcQ = 100;
+scale_mpcR = 1;
+mpc_Q = scale_mpcQ*[10,0,0,0,0,0;
+        0,10,0,0,0,0;
+        0,0,10,0,0,0;
+        0,0,0,1,0,0;
+        0,0,0,0,1,0;
+        0,0,0,0,0,1];
+mpc_R = scale_mpcR*eye(3);
 
 %{
     State estimator choice:
@@ -54,9 +65,11 @@ stats = ARPOD_Statistics;
 stats.initBenchmark(traj);
 
 sense = ARPOD_Benchmark.sensor(traj, @() [0;0], phase);
-mhe_stateWindow = [traj];
-mhe_sensorWindow = [sense];
 
+
+[xs,us] = ChaserMPC.optimizeLinear(traj,mpc_Q,mpc_R,mpc_horizon,tstep,1);
+
+%{
 for i = 1+tstep:tstep:total_time
     phase = ARPOD_Benchmark.calculatePhase(traj,false);
 
@@ -69,5 +82,5 @@ for i = 1+tstep:tstep:total_time
 
     stats.updateBenchmark
 end
-
+%}
 

@@ -17,7 +17,7 @@ classdef ARPOD_Benchmark
         x_docked = [0;0;0;0;0;0]; % docked position in km, and km/s
         x_relocation = [0;20;0;0;0;0]; %relocation position in km, km/s
         x_partner = [0;30;0;0;0;0]; %partner position in km, km/s
-        ubar = 10;
+        ubar = 0.1;
         % can choose to add noise separately
     end
     methods (Static)
