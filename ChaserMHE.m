@@ -30,7 +30,7 @@ classdef ChaserMHE
         function states = optimize(measurements, u, state0, traj0, weightW, weightV, N, tstep, R, options)
             %{
                 measuremnts shape: (3,N)
-                traj0 shape: (6,N)
+                tra j0 shape: (6,N)
                 % for now time invariant
                 % looks into forgetting factor (weigh higher newer terms)
                 weightW shape: (6,6,N)
@@ -43,17 +43,20 @@ classdef ChaserMHE
                 Note: initialize w/ propagating thru dynamics
                 Note: then initialize w/ previous mhe estimates
             %}
+            [n_V, m_V, step_V] = sizes(weightV);
+            meas_size = n_V;
             function cost = objective(x)
                 %{
                     x: x consists of x_0:N, w_0:N, v_0:N (size is 6*N + 6*N
                     + 3*N, 1)
                 %}
                 wt = x(6*N+1:12*N,:);
-                vt = x(12*N+1:15*N,:);
+
+                vt = x(12*N+1:(12+meas_size)*N,:);
                 cost = 0;
                 for i = 1:N
                     wi = wt(1+6*(i-1):6*i,:);
-                    vi = vt(1+3*(i-1):3*i,:);
+                    vi = vt(1+(meas_size)*(i-1):(meas_size)*i,:);
                     cost = cost + wi.' * weightW(:,:,i) * wi;
                     cost = cost + vi.' * weightV(:,:,i) * vi;
                 end
@@ -65,7 +68,7 @@ classdef ChaserMHE
 
                 xt = x(1:6*N,:);
                 wt = x(6*N+1:12*N,:);
-                vt = x(12*N+1:15*N,:);
+                vt = x(12*N+1:(12+meas_size)*N,:);
 
                 ceq = zeros(3*N+6*N+6,1);
                 for i = 1:N
@@ -73,13 +76,13 @@ classdef ChaserMHE
                     if i < N
                         xi1 = xt(6*i+1:6*(i+1),:);
                         wi = wt(6*(i-1)+1:6*i,:);
-                        ceq(3*N+6*(i-1)+1:3*N+6*i,:) = ChaserMHE.linearDynamics(xi,u(:,i), R, tstep) + wi - xi1;
+                        ceq(meas_size*N+6*(i-1)+1:meas_size*N+6*i,:) = ChaserMHE.linearDynamics(xi,u(:,i), R, tstep) + wi - xi1;
                     end
                     hi = ARPOD_Sensing.measure(xi);
-                    vi = vt(1+3*(i-1):3*i,:);
-                    ceq(3*(i-1)+1:3*i,:) = hi + vi - measurements(:,i);
+                    vi = vt(1+meas_size*(i-1):meas_size*i,:);
+                    ceq(meas_size*(i-1)+1:meas_size*i,:) = hi + vi - measurements(:,i);
                 end
-                ceq(3*N+6*N+1:3*N+6*N+6,:) = x(1:6,:) - traj0;
+                ceq(meas_size*N+6*N+1:meas_size*N+6*N+6,:) = x(1:6,:) - traj0;
             end
             %initialize guess (warm starting?)
             x0 = zeros(15*N,1);
@@ -89,8 +92,8 @@ classdef ChaserMHE
             b = [];
             Aeq = [];
             beq = [];
-            lb = zeros(15*N,1) - Inf; %have bounds for noise
-            ub = zeros(15*N,1) + Inf; %
+            lb = zeros((12+meas_size)*N,1) - Inf; %have bounds for noise
+            ub = zeros((12+meas_size)*N,1) + Inf; %
             nonlincon = @nonlcon;
             xstar = fmincon(@objective, x0, A, b, Aeq, beq, lb, ub, nonlincon, options);
             xstar_xt = xstar(1:6*N,:);

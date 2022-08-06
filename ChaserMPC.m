@@ -145,6 +145,7 @@ classdef ChaserMPC
         function us = optimizeNonlinear()
         end
         function u = mpc_estimate()
+            
         end
     end
 end
