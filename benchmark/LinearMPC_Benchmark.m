@@ -8,9 +8,17 @@
             Moving Horizon Estimator.
 
             Graph should give the estimated trajectory 
-
+        
         TODO: Run Linear MPC from the ChaserMPC
-        TODO: Run MHE from ChaserMHE
+        TODO: Run EKF
+        TODO: Run PF
+        TODO: Run MHE
+
+        Future features: 
+        ----------------
+           - Thruster Options
+           - Discrete/Cont/Impulsive Choice
+           - State estimation Option
 %}
 
 %initial parameters
@@ -23,22 +31,29 @@ phase = 1;
 scale_sensorNoise = 0.1;
 scale_dynamicNoise = 0.001;
 
+%{
+    State estimator choice:
+    -----------------------
+        1: Extended Kalman Filter
+        2: Particle Filter
+%}
+stateEstimator = 1;
+
 %Future features: 
-%
+%   Thruster Options
+%   Discrete/Cont/Impulsive Choice
+%   State estimation Option
 
 %setting up gaussian noise models
-noiseQ = @() transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.001], 1));
+noisePhase1 = @() transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1], 1));
+noisePhase234 = @() transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.001], 1));
 noiseP = @() transpose(scale_dynamicNoise*mvnrnd([0;0;0;0;0;0], [1;1;1;0.1;0.1;0.1], 1));
-
-%setting up variables for mhe
-mhe_stateWindow = [];
-mhe_sensorWindow = [];
 
 %initialize statistics for graph
 stats = ARPOD_Statistics;
 stats.initBenchmark(traj);
 
-sense = ARPOD_Benchmark.sensor(traj, noiseQ, phase);
+sense = ARPOD_Benchmark.sensor(traj, @() [0;0], phase);
 mhe_stateWindow = [traj];
 mhe_sensorWindow = [sense];
 
@@ -48,15 +63,10 @@ for i = 1+tstep:tstep:total_time
     %calculate the next "u" using MPC
 
     traj = ARPOD_Benchmark.nextStep(traj,u,tstep,noiseP,phase);
+    state = ARPOD_Benchmark.sensor(traj,noiseQ,phase);
 
+    
 
-    if i < mhe_horizon
-        %estimate over all of previous timesteps
-
-    else
-        %estimate over only last mhe_horizon timesteps
-
-    end
     stats.updateBenchmark
 end
 

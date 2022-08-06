@@ -6,44 +6,91 @@ classdef ChaserEKF
 
         x_t+1 = Ax_t + Bu_t
         c_t = h(x_t)
+
+        Example Using EKF:
+        ------------------
+            Call state_estimator = ChaserEKF
+            Q = eye(6)
+            R = eye(3)
+            state0 = zeros(6,1);
+            cov0 = zeros(6,6);
+            u = ....;
+            tstep = 1;
+
+
+            state_estimator.initEKF(state0, cov0);
+            state_estimator.prediction(u, Q, tstep)
+            state_estimator.sensor_correct(z_t, measCov, phase)
+            
     %}
-    properties (Constant)
-        %
-        mu_GM = 398600.4; %km^2/s^2;
+    properties
+        %{
+            These are properties of EKF tracked over time.
+            The only ones that matter.
+        %}
+        state
+        cov
     end
-    methods (Static)
-        function [state,cov] = prediction(state0, cov0, u0, T, R, systemCov)
-            n = sqrt(ChaserEKF.mu_GM / (R.^3) );
-            A = zeros(6,6);
-            B = zeros(6,3);
-            S = sin(n * T);
-            C = cos(n * T);
-
-            A(1,:) = [4-3*C,0,0,S/n,2*(1-C)/n,0];
-            A(2,:) = [6*(S-n*T),1,0,-2*(1-C)/n,(4*S-3*n*T)/n,0];
-            A(3,:) = [0,0,C,0,0,S/n];
-            A(4,:) = [3*n*S,0,0,C,2*S,0];
-            A(5,:) = [-6*n*(1-C),0,0,-2*S,4*C-3,0];
-            A(6,:) = [0,0,-n*S,0,0,C];
-
-            B(1,:) = [(1-C)/(n*n),(2*n*T-2*S)/(n*n),0];
-            B(2,:) = [-(2*n*T-2*S)/(n*n),(4*(1-C)/(n*n))-(3*T*T/2),0]; 
-            B(3,:) = [0,0,(1-C)/(n*n)];
-            B(4,:) = [S/n,2*(1-C)/n, 0];
-            B(5,:) = [-2*(1-C)/n,(4*S/n) - (3*T),0];
-            B(6,:) = [0,0,S/n];
-
-            state = A*state0 + B*u0;
-            cov = A*cov0*transpose(A) + systemCov;
+    methods 
+        function obj = initEKF(obj, state0, cov0)
+            %{
+                Parameters:
+                ------------
+                    state0: 6x1 vector that defines state of spacecraft.
+                    cov0: 6x6 matrix that defines current covariance
+                Description:
+                ------------
+                    Simply initializing object for state estimation.
+            %}
+            obj.state = state0;
+            obj.cov = cov0;
         end
-        function [state,cov] = estimate(state_t,cov_t,u_t,T,R,z_t,systemCov,measCov, phase)
-            [state_pred, cov_pred] = ChaserEKF.prediction(state_t,cov_t,u_t,T,R,systemCov);
-            H = ARPOD_Benchmark.jacobianSensor(state_pred,phase, ARPOD_Benchmark.x_partner);
-            K_gain = cov_pred*transpose(H)*inv(H*cov_pred*transpose(H) + measCov);
+        function obj = prediction(obj, u, systemCov, tstep)
+            %{
+                Parameters:
+                ------------
+                    u: 3x1 vector control input of thrusters (in accel)
+                    systemCov: 6x6 matrix system covariance of EKF.
+                    tstep: discrete timestep of EKF.
+                    
+                Description:
+                ------------
+                    Implementation of the prediction of spacecraft state
+                    given the previous state. This is a rough estimate that
+                    uses linear dynamics of the system. Namely, the
+                    Hill-Clohessy-Wiltshire equations for relative space
+                    motion. This assumes discrete control input over time.
+            %}
+            [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
+            obj.state = A*obj.state + B*u;
+            obj.cov = A*obj.cov*transpose(A) + systemCov;
+        end
+        function obj = sensor_correct(obj, z_t, measCov, phase)
+            %{
+                Parameters:
+                -----------
+                    z_t: 3x1 or 2x1 measurement vector of EKF.
+                    measCov: 3x3 or 2x2 covariance matrix of meas.
+                    phase: the phase that spacecraft is in
+                Description:
+                ------------
+                    NOTE: requires prediction to have been run beforehand.
+                    Runs the sensor_correct that corrects prediction to a
+                    much more accurate state by conditioning on the
+                    observed measurement variable in the HMM formulation of
+                    EKF.
+            %}
 
-            measure = ARPOD_Benchmark.sensor(state_pred, @() [0;0;0], phase);
-            state = state_pred + K_gain*(z_t-measure);
-            cov = (eye(6) - K_gain*H)*cov_pred;
+            %take jacobian of the measurements based on the state
+            H = ARPOD_Benchmark.jacobianSensor(obj.state, phase, ARPOD_Benchmark.x_partner);
+            %calculate riccati K gain
+            K_gain = obj.cov*transpose(H)/(H*obj.cov*transpose(H)+measCov);
+
+            %convert predicted state into a measurement to compare with the
+            %real measurement, then correct covariance and state.
+            measure = ARPOD_Benchmark.sensor(obj.state, @() [0;0;0], phase);
+            obj.state = obj.state + K_gain*(z_t-measure);
+            obj.cov = (eye(6) - K_gain*H)*obj.cov;
         end
     end
 end
