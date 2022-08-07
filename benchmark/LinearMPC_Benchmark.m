@@ -20,14 +20,14 @@
 %}
 
 %initial parameters
-traj = [-5;-5;-5;0.01;0.01;0.01];
+traj = [-4;-4;4;0.001;0.001;0.001];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 1000;
+total_time = 4000;
 tstep = 1; % update every second
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
 %MPC parameters
-mpc_horizon = 25;
+mpc_horizon = 50;
 scale_mpcQ = 100;
 scale_mpcR = 1;
 mpc_Q = scale_mpcQ*[10,0,0,0,0,0;
@@ -55,21 +55,26 @@ stateEstimatorOption = 1;
     error.
 %}
 if (stateEstimatorOption == 1)
+    %EKF
     stateEstimator = ChaserEKF;
     stateEstimator = stateEstimator.initEKF(traj, 1e-10*eye(6)); %really trust initial estimate.
 
     scale_Q = 1e-10;
-    scale_R = 0.1;
-    seQ = scale_Q*eye(6);
-    seR = scale_R*eye(3);
+    scale_R = 1;
+    seQ = scale_Q*diag([1,1,1,0.1,0.1,0.1]);
+    seR = scale_R*diag([1,1,0.00001]);
+elseif (stateEstimatorOptions == 2)
+    %PF
+else
+    %
 end
 
 %setting up gaussian noise models
-scale_sensorNoise = 0.1;
-scale_dynamicNoise = 0.0001;
+scale_sensorNoise = 1;
+scale_dynamicNoise = 0.000000001;
 %bound the noise so it doesn't go crazy
-noiseQ = @() max(min(transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.001], 1)),scale_sensorNoise*5*ones(3,1)),-scale_sensorNoise*-5*ones(3,1));
-noiseP = @() max(min(transpose(scale_dynamicNoise*mvnrnd([0;0;0;0;0;0], [1,1,1,0.1,0.1,0.1], 1)),-scale_dynamicNoise*5),scale_dynamicNoise*5);
+noiseQ = @() max(min(transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.00001], 1)),scale_sensorNoise*5*ones(3,1)),-scale_sensorNoise*5*ones(3,1));
+noiseP = @() max(min(transpose(scale_dynamicNoise*mvnrnd([0;0;0;0;0;0], [1,1,1,0.1,0.1,0.1], 1)),scale_dynamicNoise*5),-scale_dynamicNoise*5);
 
 %initialize statistics for graph
 stats = ARPOD_Statistics;
@@ -79,10 +84,11 @@ sense = ARPOD_Benchmark.sensor(traj, @() [0;0;0], phase);
 estTraj = traj;
 
 
-for i = 1+tstep:tstep:total_time
+for i = tstep:tstep:total_time
     disp(i)
     phase = ARPOD_Benchmark.calculatePhase(traj,false);
     %calculate the next "u" using MPC
+
     u = ChaserMPC.controlMPC(traj,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase,1);
 
     % use the u to simulate next step of the chaser spacecraft
