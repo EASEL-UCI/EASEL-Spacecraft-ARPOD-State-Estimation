@@ -1,2 +1,2 @@
 obj = ARPOD_Statistics;
-obj.graph(pi/3, pi/3);
+obj.graphLinear(pi/3, pi/3);

@@ -22,13 +22,27 @@ classdef ARPOD_Benchmark
     end
     methods (Static)
         function inLOS = isInsideLOS(traj)
+            theta1 = ARPOD_Benchmark.theta * pi / 180; %docking angle in radians
+            theta2 =  theta1;
+            LOS_mtx = [ sin(theta1/2), cos(theta1/2), 0; 
+                    sin(theta1/2), -cos(theta1/2), 0;
+                    sin(theta2/2), 0, cos(theta2/2);
+                    sin(theta2/2), 0, -cos(theta2/2)];
+            xyz = [traj(1);traj(2);traj(3)];
+            b = LOS_mtx*xyz;
+            if b(1) <= 0 && b(2) <= 0 && b(3) <= 0 && b(4) <= 0
+                inLOS = 1;
+            else
+                inLOS = 0;
+            end
+        end
+        function inLOS = isInsideNonlinearLOS(traj)
             theta = ARPOD_Benchmark.theta * pi / 180; %docking angle in radians
             rho_d = ARPOD_Benchmark.rho_d;
             c = rho_d * ARPOD_Benchmark.c;
-            rho = [traj(1),traj(2),traj(3)];
+            rho = [traj(1);traj(2);traj(3)];
             
             dot = (rho.' * c) / (norm(rho)*norm(c));
-            disp(dot)
             if (dot(1) >= cos(theta/2))
                 % within LOS
                 inLOS = 1;
@@ -39,12 +53,12 @@ classdef ARPOD_Benchmark
         end
         function phase = calculatePhase(traj, reached)
             norm = traj(1:3,:);
-            norm = sqrt(norm.^2);
+            norm = sqrt(sum(norm.^2));
             if (reached == 0)
                 if (norm > ARPOD_Benchmark.rho_r)
                     % ARPOD phase 1: Rendezvous w/out range
                     phase = 1;
-                elseif ( (norm > ARPOD_Benchmark.rho_d) && (ARPOD_Benchmark.isInsideLOS(traj) == 0) ) 
+                elseif ( (norm > ARPOD_Benchmark.rho_d) || (ARPOD_Benchmark.isInsideLOS(traj) == 0) ) 
                     % ARPOD phase 2: Rendezvous with range
                     phase = 2;
                 else 
@@ -73,7 +87,7 @@ classdef ARPOD_Benchmark
                 [ts, trajs] = nonlinearChaserDynamics.simulateMotion(traj0, ARPOD_Benchmark.a, u,timestep, 0);
                 traj = trajs(length(ts),:);
             end
-            traj = traj + noise();
+            traj = traj.' + noise();
         end
         function sensor = sensor(state, noise, phase)
             if (phase == 1)

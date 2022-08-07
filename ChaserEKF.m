@@ -28,8 +28,8 @@ classdef ChaserEKF
             These are properties of EKF tracked over time.
             The only ones that matter.
         %}
-        state
-        cov
+        state = [0;0;0;0;0;0];
+        cov = eye(6);
     end
     methods 
         function obj = initEKF(obj, state0, cov0)
@@ -84,13 +84,25 @@ classdef ChaserEKF
             %take jacobian of the measurements based on the state
             H = ARPOD_Benchmark.jacobianSensor(obj.state, phase, ARPOD_Benchmark.x_partner);
             %calculate riccati K gain
-            K_gain = obj.cov*transpose(H)/(H*obj.cov*transpose(H)+measCov);
+            if phase == 1
+                measCov = measCov(1:2,1:2);
+            end
+            K_gain = obj.cov*transpose(H)*inv(H*obj.cov*transpose(H)+measCov);
 
             %convert predicted state into a measurement to compare with the
             %real measurement, then correct covariance and state.
             measure = ARPOD_Benchmark.sensor(obj.state, @() [0;0;0], phase);
             obj.state = obj.state + K_gain*(z_t-measure);
             obj.cov = (eye(6) - K_gain*H)*obj.cov;
+        end
+        function obj = estimate(obj, u, z_t, systemCov, measCov,tstep, phase)
+            %{
+                Combines the use of both the predict and correct step
+                For the sake of generalizing state estimators.
+                NOTE: I hope ducktyping works :)
+            %}
+            obj = obj.prediction(u,systemCov,tstep);
+            obj = obj.sensor_correct(z_t,measCov,phase);
         end
     end
 end

@@ -17,6 +17,8 @@ classdef ARPOD_Statistics
             obj.trackFuelConsumption = [0];
             obj.timestamps = [0];
             obj.trackPhase = [1]; %mission always starts on phase 1
+            obj.trackTraj = [obj.trackTraj, traj0];
+            obj.trackEstTraj = [obj.trackEstTraj, traj0];
             obj.total_steps = 1;
         end
         function obj = updateBenchmark(obj, u, mass, trueTraj, estTraj, tstep, phase)
@@ -48,14 +50,14 @@ classdef ARPOD_Statistics
             %}
 
             figure 
-
+            %draw phase 2 sphere boundary
             [x,y,z] = sphere(10);
             r = ARPOD_Benchmark.rho_r;
             scatter3(r*x(:),r*y(:),r*z(:), 5,'o', 'filled', 'MarkerEdgeColor', 'c');
 
             axis equal
             hold on
-
+            %draw phase 3 sphere boundary
             [x,y,z] = sphere(5);
             r = ARPOD_Benchmark.rho_d;
             scatter3(r*x(:),r*y(:),r*z(:), 5, 'o', 'filled', 'MarkerEdgeColor', 'm');
@@ -72,6 +74,16 @@ classdef ARPOD_Statistics
             plot3([-sin(theta2/2)*c, -sin(theta2/2)*c], [-sin(theta1/2)*c,sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
             plot3([sin(theta2/2)*c, sin(theta2/2)*c], [-sin(theta1/2)*c, sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
 
+            %draw truechaserTraj
+            plot3(obj.trackTraj(1,:), obj.trackTraj(2,:), obj.trackTraj(3,:), 'r');
+            %draw estchaserTraj
+            %plot3(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b');
+            %draw target position
+            %plot3(0,0,0,12,'rx');
+            %draw 4th rendezvous
+            %draw chaserStart
+            %draw chaserEnd
+            
             hold off
 
             return;

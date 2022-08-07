@@ -119,15 +119,18 @@ classdef ChaserMPC
                     sin(theta1/2), -cos(theta1/2), 0;
                     sin(theta2/2), 0, cos(theta2/2);
                     sin(theta2/2), 0, -cos(theta2/2)];
-
+            LOS_mtx = [LOS_mtx, zeros(4,3)];
             LOS = [];
             for i = 1:n_horizon
                 if i == index
                     mtx = LOS_mtx;
+                    if i ~= n_horizon
+                        mtx = [mtx, zeros(4,3)];
+                    end
                 elseif i ~= n_horizon
-                    mtx = zeros(6,9);
+                    mtx = zeros(4,9);
                 else
-                    mtx = zeros(6,6);
+                    mtx = zeros(4,6);
                 end
                 LOS = [LOS, mtx];
             end
@@ -166,7 +169,7 @@ classdef ChaserMPC
                 end
             end
         end
-        function [xs,us] = optimizeLinear(traj0, Q, R, n_horizon, tstep, phase, mass)
+        function [xs,us] = optimizeLinear(traj0, Q, R, n_horizon, tstep, mass, phase)
             %{
                 Parameters:
                 ------------
@@ -208,7 +211,7 @@ classdef ChaserMPC
                 A = ChaserMPC.setupLinearLOS(n_horizon,n_horizon);
             elseif phase == 3
                 for i = 1:n_horizon
-                    LOS = ChaserMPC.setupLinearLOS(index,n_horizon);
+                    LOS = ChaserMPC.setupLinearLOS(i,n_horizon);
                     A = [A; LOS];
                 end
                 for i = 1:9:9*n_horizon-3
@@ -218,10 +221,40 @@ classdef ChaserMPC
             end
             [n,m] = size(A);
             b = zeros(n,1);
-
-            final = quadprog(H,f,A,b,Aeq,beq,lb,ub);
+            disp("Sizes ")
+            disp(size(Aeq))
+            disp(size(beq))
+            disp(size(A))
+            disp(size(b))
+            disp(size(H))
+            disp(size(f))
+            disp(size(lb))
+            disp(size(ub))
+            options = optimoptions(@quadprog, 'Algorithm', 'active-set');
+            x0 = zeros(length(H),1);
+            final = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
 
             [xs,us] = ChaserMPC.extractOptVector(final, n_horizon);
+        end
+        function u = controlMPC(traj0, Q, R, n_horizon, tstep, mass, phase, mpc_option)
+            %{
+                Parameters:
+                -----------
+                    Same parameters as MPC optimize function
+                    With addition of mpc_option
+                    mpc_option = 1 -> linear mpc
+                    mpc_option = 2 -> nonlinear mpc
+                Description:
+                ------------
+                    Blackbox controller for MPC (all the opt functions
+                    above).
+            %}
+            if (mpc_option==1)
+                [xs,us] = ChaserMPC.optimizeLinear(traj0,Q,R,n_horizon,tstep,mass,phase);
+            else
+                %TODO implement Nonlinear MPC
+            end
+            u = us(1:3,1); %return first control input
         end
     end
 end
