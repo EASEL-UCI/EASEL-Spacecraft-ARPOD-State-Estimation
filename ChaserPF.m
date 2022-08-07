@@ -1,12 +1,10 @@
 classdef ChaserPF
-    properties (Constant)
+    properties
+        particles
+        weights
+        n_particles
     end
     methods (Static)
-        function [weights, particles] = initialize_particles(mean, cov, n)
-            particles = mvnrnd(mean,cov,n);
-            particles = transpose(particles);
-            weights = ones(n,1)/n;
-        end
         function rand = sample_gaussian(mu,cov)
             rand = mvnrnd(mu,cov,1);
         end
@@ -14,55 +12,72 @@ classdef ChaserPF
             [N,dim] = size(weights);
             indexes = randsample(N,N,true,weights.');
         end
-        function [weights, particles] = nonlinearPF(weights0, particles0, measurement, ESS_threshold, Q_cov, R_cov, u, R, T)
-            [dim, N] = size(particles0);
-            %calculate ESS
-            ESS = 1/sum( weights0.^2 );
+    end
+    methods 
+        function obj = initPF(obj, mean,cov, n)
+            %{
+                Initialize particle filter:
+                    acts as a constructor
+                Adds in number of particles
+                particles themselves
+                and the weights.
+            %}
+            obj.n_particles = n;
+            obj.particles = mvnrdn(mean, cov, n);
+            obj.weights = ones(n,1)/n;
+        end
+        function obj = resampling(obj, ESS_threshold)
+            %{
+            %}
+            ESS = 1/sum(obj.weights.^2);
             if (ESS < ESS_threshold)
-                % if effective sample size is below desired threshold,
-                % resample particles.
-                old_particles = particles0;
-                idx_particles = ChaserPF.sample_particles(weights0);
-                for i = 1:N
+                %resample
+                old_particles = obj.particles;
+                idx_particles = ChaserPF.sample_particles(obj.particles);
+                for i =1:obj.n_particles
                     j = idx_particles(i);
-                    particles0(:,i) = old_particles(:,j);
+                    obj.particles(:,i) = old_particles(:,j);
                 end
-                weights0 = zeros(N,1) + 1/N;
+                obj.weights = ones(N,1)/N;
+            end
+        end        
+        function state = estimateState(obj)
+            state = zeros(6,1);
+            for i = 1:obj.n_particles
+                state = state + obj.weights(i) * obj.particles(:,i);
+            end
+        end
+
+        function obj = particlesUpdate(obj, measurement, Q_cov, R_cov, u, tstep, phase)
+            [dim,N] = obj.particles;
+
+            idx_particles = ChaserPF.sample_particles(obj.weights);
+            new_particles = zeros(dim,N);
+            new_weights = zeros(N,1);
+            sum_weights = 0;
+
+            if phase == 1
+                R_cov = R_cov(1:2,1:2);
             end
 
-
-            %initialize particle and weights;
-            %discretely sample particle from discrete weight distribution
-            idx_particles = ChaserPF.sample_particles(weights0);
-            particles = zeros(dim,N);
-            weights = zeros(N,1);
-            sum_weights = 0;
             for i = 1:N
                 j = idx_particles(i);
+                prop = ARPOD_Benchmark.nextStep(obj.particles(:,j), u,tstep,@() [0;0;0;0;0;0], 1);
+                new_particles(:,i) = ChaserPF.sample_gaussian(prop,Q_cov);
 
-                %propagate individual particle
-                [ts, traj] = nonlinearChaserDynamics.simulateMotion( particles0(:,j), R, u, T, T/2);
-                prop = transpose(traj(3,:));
-
-                %sampling particle from transition distribution
-                particles(:,i) = ChaserPF.sample_gaussian(prop,Q_cov);
-
-                %create weight using measurement likelihood distribution\
-                expected_measurement = ARPOD_Sensing.measure(prop);
-                %disp( ChaserPF.sample_gaussian(measurement - expected_measurement, R_cov) );
-                %weights(i) = ChaserPF.sample_gaussian(measurement - expected_measurement, R_cov);
-                weights(i) = abs(mvnpdf(measurement, expected_measurement, R_cov));
-                sum_weights = sum_weights + weights(i);
+                estimated_measurement = ARPOD_Benchmark.sensor(prop, @() [0;0;0], phase);
+                new_weights(i) = abs(mvnpdf(measurement, estimated_measurement, R_cov));
+                sum_weights = sum_weights + new_weights(i);
             end
-            weights = weights / sum_weights; %normalization of weights
-            disp(sum_weights);
+            new_weights = new_weights / sum_weights;
+
+            obj.particles = new_particles;
+            obj.weights = new_weights;
         end
-        function state = estimateState(weights, particles)
-            N = size(weights);
-            state = zeros(6,1);
-            for i = 1:N
-                state = state + weights(i) * particles(:,i);
-            end
+        function state = estimate(obj, measurement, ESS_threshold, Q_cov, R_cov, u, tstep, phase)
+            obj = obj.resampling(ESS_threshold);
+            obj = obj.particlesUpdate(measurement, Q_cov, R_cov, u ,tstep, phase);
+            state = obj.estimateState();
         end
     end
 end
