@@ -77,7 +77,7 @@ classdef ARPOD_Statistics
             %draw truechaserTraj
             plot3(obj.trackTraj(1,:), obj.trackTraj(2,:), obj.trackTraj(3,:), 'r');
             %draw estchaserTraj
-            %plot3(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b');
+            plot3(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b');
             %draw target position
             %plot3(0,0,0,12,'rx');
             %draw 4th rendezvous
@@ -87,6 +87,10 @@ classdef ARPOD_Statistics
             hold off
 
             return;
+        end
+        function totalMSE = getError(obj)
+            MSEperStep = sum((obj.trackTraj - obj.trackEstTraj).^2);
+            totalMSE = sum(MSEperStep);
         end
     end
 end

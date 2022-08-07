@@ -20,7 +20,7 @@
 %}
 
 %initial parameters
-traj = [-0.5;-0.5;-0.5;0;0;0];
+traj = [-5;-5;-5;0.01;0.01;0.01];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
 total_time = 1000;
 tstep = 1; % update every second
@@ -56,19 +56,20 @@ stateEstimatorOption = 1;
 %}
 if (stateEstimatorOption == 1)
     stateEstimator = ChaserEKF;
-    stateEstimator = stateEstimator.initEKF(traj, 0.00001*eye(6)); %really trust initial estimate.
+    stateEstimator = stateEstimator.initEKF(traj, 1e-10*eye(6)); %really trust initial estimate.
 
-    scale_Q = 0.001;
-    scale_R = 0.01;
+    scale_Q = 1e-10;
+    scale_R = 0.1;
     seQ = scale_Q*eye(6);
     seR = scale_R*eye(3);
 end
 
 %setting up gaussian noise models
 scale_sensorNoise = 0.1;
-scale_dynamicNoise = 0;
-noiseQ = @() transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.001], 1));
-noiseP = @() transpose(scale_dynamicNoise*mvnrnd([0;0;0;0;0;0], [1,1,1,0.1,0.1,0.1], 1));
+scale_dynamicNoise = 0.0001;
+%bound the noise so it doesn't go crazy
+noiseQ = @() max(min(transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.001], 1)),scale_sensorNoise*5*ones(3,1)),-scale_sensorNoise*-5*ones(3,1));
+noiseP = @() max(min(transpose(scale_dynamicNoise*mvnrnd([0;0;0;0;0;0], [1,1,1,0.1,0.1,0.1], 1)),-scale_dynamicNoise*5),scale_dynamicNoise*5);
 
 %initialize statistics for graph
 stats = ARPOD_Statistics;

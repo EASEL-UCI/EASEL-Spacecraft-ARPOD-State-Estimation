@@ -221,15 +221,6 @@ classdef ChaserMPC
             end
             [n,m] = size(A);
             b = zeros(n,1);
-            disp("Sizes ")
-            disp(size(Aeq))
-            disp(size(beq))
-            disp(size(A))
-            disp(size(b))
-            disp(size(H))
-            disp(size(f))
-            disp(size(lb))
-            disp(size(ub))
             options = optimoptions(@quadprog, 'Algorithm', 'active-set');
             x0 = zeros(length(H),1);
             final = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
