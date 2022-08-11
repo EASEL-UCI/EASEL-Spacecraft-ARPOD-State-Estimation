@@ -1,5 +1,12 @@
 classdef ChaserMHE
-    properties (Constant)
+    properties 
+        window_states
+        window_sensors
+        state
+        %optional feature: forgetting factor. Almost opposite to a discount
+        %factor.
+    end
+    methods 
     end
     methods (Static)
         function next_state = linearDynamics(x, u, R, T)

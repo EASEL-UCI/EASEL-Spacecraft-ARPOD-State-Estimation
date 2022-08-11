@@ -3,6 +3,8 @@ classdef ChaserPF
         particles
         weights
         n_particles
+        ESS_Threshold
+        state
     end
     methods (Static)
         function rand = sample_gaussian(mu,cov)
@@ -14,7 +16,7 @@ classdef ChaserPF
         end
     end
     methods 
-        function obj = initPF(obj, mean,cov, n)
+        function obj = initPF(obj, mean,cov, n, ESS_Threshold)
             %{
                 Initialize particle filter:
                     acts as a constructor
@@ -23,14 +25,16 @@ classdef ChaserPF
                 and the weights.
             %}
             obj.n_particles = n;
-            obj.particles = mvnrdn(mean, cov, n);
+            obj.particles = mvnrnd(mean, cov, n).';
             obj.weights = ones(n,1)/n;
+            obj.ESS_Threshold = ESS_Threshold;
+            obj.state = mean.';
         end
-        function obj = resampling(obj, ESS_threshold)
+        function obj = resampling(obj)
             %{
             %}
             ESS = 1/sum(obj.weights.^2);
-            if (ESS < ESS_threshold)
+            if (ESS < obj.ESS_Threshold)
                 %resample
                 old_particles = obj.particles;
                 idx_particles = ChaserPF.sample_particles(obj.particles);
@@ -49,7 +53,7 @@ classdef ChaserPF
         end
 
         function obj = particlesUpdate(obj, measurement, Q_cov, R_cov, u, tstep, phase)
-            [dim,N] = obj.particles;
+            [dim,N] = size(obj.particles);
 
             idx_particles = ChaserPF.sample_particles(obj.weights);
             new_particles = zeros(dim,N);
@@ -74,10 +78,10 @@ classdef ChaserPF
             obj.particles = new_particles;
             obj.weights = new_weights;
         end
-        function state = estimate(obj, measurement, ESS_threshold, Q_cov, R_cov, u, tstep, phase)
-            obj = obj.resampling(ESS_threshold);
+        function obj = estimate(obj, u, measurement, Q_cov, R_cov, tstep, phase)
+            obj = obj.resampling();
             obj = obj.particlesUpdate(measurement, Q_cov, R_cov, u ,tstep, phase);
-            state = obj.estimateState();
+            obj.state = obj.estimateState();
         end
     end
 end

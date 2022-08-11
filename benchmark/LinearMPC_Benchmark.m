@@ -8,8 +8,7 @@
             Moving Horizon Estimator.
 
             Graph should give the estimated trajectory 
-        
-        TODO: Run PF
+
         TODO: Run MHE
 
         Future features: 
@@ -20,9 +19,9 @@
 %}
 
 %initial parameters
-traj = [-4;-4;4;0.001;0.001;0.001];
+traj = [-1;-1;1;0.001;0.001;0.001];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 4000;
+total_time = 100;
 tstep = 1; % update every second
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
@@ -59,12 +58,24 @@ if (stateEstimatorOption == 1)
     stateEstimator = ChaserEKF;
     stateEstimator = stateEstimator.initEKF(traj, 1e-10*eye(6)); %really trust initial estimate.
 
+    % tunable parameters
     scale_Q = 1e-10;
     scale_R = 1;
     seQ = scale_Q*diag([1,1,1,0.1,0.1,0.1]);
     seR = scale_R*diag([1,1,0.00001]);
-elseif (stateEstimatorOptions == 2)
+elseif (stateEstimatorOption == 2)
     %PF
+    ess_threshold = 750;
+    n_particles = 1000;
+
+    stateEstimator = ChaserPF;
+    stateEstimator = stateEstimator.initPF(traj.', 1e-10*eye(6), n_particles, ess_threshold);
+
+    % tunable estimators
+    scale_Q = 1e-10;
+    scale_R = 1;
+    seQ = scale_Q*diag([1,1,1,0.1,0.1,0.1]);
+    seR = scale_R*diag([1,1,0.00001]);
 else
     %
 end
@@ -98,7 +109,7 @@ for i = tstep:tstep:total_time
 
 
     %given sensor reading read EKF
-    stateEstimator = stateEstimator.estimate(u,sense, seQ, seR, tstep, phase);
+    stateEstimator = stateEstimator.estimate(u, sense, seQ, seR, tstep, phase);
     estTraj = stateEstimator.state;
 
     stats = stats.updateBenchmark(u, ARPOD_Benchmark.m_c, traj, estTraj, tstep, phase);
