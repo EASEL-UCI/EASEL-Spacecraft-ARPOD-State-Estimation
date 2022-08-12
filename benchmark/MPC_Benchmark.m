@@ -1,5 +1,5 @@
 %{
-    Linear MPC Benchmark Script
+    MPC Benchmark Script
     ----------------------------
         Description:
         ------------
@@ -21,12 +21,12 @@
 %initial parameters
 traj = [-1;-1;1;0.001;0.001;0.001];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 100;
+total_time = 500;
 tstep = 1; % update every second
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
 %MPC parameters
-mpc_horizon = 50;
+mpc_horizon = 100;
 scale_mpcQ = 100;
 scale_mpcR = 1;
 mpc_Q = scale_mpcQ*[10,0,0,0,0,0;
@@ -36,6 +36,17 @@ mpc_Q = scale_mpcQ*[10,0,0,0,0,0;
         0,0,0,0,1,0;
         0,0,0,0,0,1];
 mpc_R = scale_mpcR*eye(3);
+
+%{
+    Model Predictive Control choice:
+    --------------------------------
+        1. Linear MPC --> quadprog
+        2. Nonlinear MPC --> fmincon
+%}
+mpc_choice = 2;
+if mpc_choice == 2
+    mpc = ChaserNLMPC;
+end
 
 %{
     State estimator choice:
@@ -100,7 +111,12 @@ for i = tstep:tstep:total_time
     phase = ARPOD_Benchmark.calculatePhase(traj,false);
     %calculate the next "u" using MPC
 
-    u = ChaserMPC.controlMPC(traj,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase,1);
+    if mpc_choice == 1
+        u = ChaserMPC.controlMPC(traj,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase);
+    else
+        mpc = mpc.controlMPC(traj, mpc_Q, mpc_R, tstep, mpc_horizon, ARPOD_Benchmark.m_c, phase);
+        u = mpc.warm_u(:,1);
+    end
 
     % use the u to simulate next step of the chaser spacecraft
     traj = ARPOD_Benchmark.nextStep(traj.',u,tstep,noiseP,1);

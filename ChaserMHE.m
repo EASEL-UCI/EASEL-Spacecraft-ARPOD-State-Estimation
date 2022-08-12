@@ -3,10 +3,21 @@ classdef ChaserMHE
         window_states
         window_sensors
         state
+
         %optional feature: forgetting factor. Almost opposite to a discount
         %factor.
     end
     methods 
+        function objective = quadraticCost()
+        end
+        function objective = loglikelihoodCost()
+        end
+        function setupConstraints()
+        end
+        function warmStart()
+        end
+        function optimize()
+        end
     end
     methods (Static)
         function next_state = linearDynamics(x, u, R, T)

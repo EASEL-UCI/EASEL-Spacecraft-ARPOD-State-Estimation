@@ -227,24 +227,18 @@ classdef ChaserMPC
 
             [xs,us] = ChaserMPC.extractOptVector(final, n_horizon);
         end
-        function u = controlMPC(traj0, Q, R, n_horizon, tstep, mass, phase, mpc_option)
+        function u = controlMPC(traj0, Q, R, n_horizon, tstep, mass, phase)
             %{
                 Parameters:
                 -----------
                     Same parameters as MPC optimize function
                     With addition of mpc_option
-                    mpc_option = 1 -> linear mpc
-                    mpc_option = 2 -> nonlinear mpc
                 Description:
                 ------------
                     Blackbox controller for MPC (all the opt functions
                     above).
             %}
-            if (mpc_option==1)
-                [xs,us] = ChaserMPC.optimizeLinear(traj0,Q,R,n_horizon,tstep,mass,phase);
-            else
-                %TODO implement Nonlinear MPC
-            end
+            [xs,us] = ChaserMPC.optimizeLinear(traj0,Q,R,n_horizon,tstep,mass,phase);
             u = us(1:3,1); %return first control input
         end
     end
