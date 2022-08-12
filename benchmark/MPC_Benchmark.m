@@ -1,6 +1,6 @@
 %{
     MPC Benchmark Script
-    ----------------------------
+    --------------------
         Description:
         ------------
             Given choice of Particle Filter, Extended Kalman Filter, and
@@ -10,12 +10,6 @@
             Graph should give the estimated trajectory 
 
         TODO: Run MHE
-
-        Future features: 
-        ----------------
-           - Thruster Options
-           - Discrete/Cont/Impulsive Choice
-           - State estimation Option6
 %}
 
 %initial parameters
@@ -94,9 +88,12 @@ end
 %setting up gaussian noise models
 scale_sensorNoise = 1;
 scale_dynamicNoise = 0.000000001;
+
+
 %bound the noise so it doesn't go crazy
 noiseQ = @() max(min(transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.00001], 1)),scale_sensorNoise*5*ones(3,1)),-scale_sensorNoise*5*ones(3,1));
 noiseP = @() max(min(transpose(scale_dynamicNoise*mvnrnd([0;0;0;0;0;0], [1,1,1,0.1,0.1,0.1], 1)),scale_dynamicNoise*5),-scale_dynamicNoise*5);
+
 
 %initialize statistics for graph
 stats = ARPOD_Statistics;
@@ -111,9 +108,18 @@ for i = tstep:tstep:total_time
     phase = ARPOD_Benchmark.calculatePhase(traj,false);
     %calculate the next "u" using MPC
 
-    if mpc_choice == 1
-        u = ChaserMPC.controlMPC(traj,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase);
+    %vary the process noise depending on whether chaser is attempting
+    %docking.
+    if phase == 1 || phase == 2
+        noiseQ = @() max(min(transpose(scale_sensorNoise*mvnrnd([0;0;0], [1,1,0.00001], 1)),scale_sensorNoise*5*ones(3,1)),-scale_sensorNoise*5*ones(3,1));
     else
+        noiseQ = @() max(min(transpose(scale_sensorNoise*mvnrnd([0;0;0], [0.0001,0.0001,0.0000001], 1)),scale_sensorNoise*5*ones(3,1)),-scale_sensorNoise*5*ones(3,1));
+    end
+
+
+    if mpc_choice == 1 %linear
+        u = ChaserMPC.controlMPC(traj,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase);
+    else %nonlinear 
         mpc = mpc.controlMPC(traj, mpc_Q, mpc_R, tstep, mpc_horizon, ARPOD_Benchmark.m_c, phase);
         u = mpc.warm_u(:,1);
     end
@@ -130,6 +136,8 @@ for i = tstep:tstep:total_time
 
     stats = stats.updateBenchmark(u, ARPOD_Benchmark.m_c, traj, estTraj, tstep, phase);
 end
+
+%graph results
 stats.graphLinear(pi/3,pi/3);
 
 

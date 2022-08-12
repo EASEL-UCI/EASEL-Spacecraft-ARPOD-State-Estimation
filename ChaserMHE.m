@@ -1,7 +1,7 @@
 classdef ChaserMHE
     properties 
         n_horizon
-        window_measurements % these are observed in simulation
+        window_measurements = []; % these are observed in simulation
         window_states %these are windows of states
         window_stateError % windows of state errors in optimization
         window_measError % windows of measurement errors in optimization
@@ -16,6 +16,14 @@ classdef ChaserMHE
             NOTE: v changes according to the phase
         %}
 
+        function modified_sense = senseModify(measurement)
+            [dim,i] = size(measurement);
+            modified_sense = modified_measurement;
+            if dim == 2
+                modified_sense(3) = 0;
+            end
+        end
+
         %setup cost functions
         function objective = quadraticCost()
             % cost function with relation to additive costs quadraticically
@@ -24,7 +32,7 @@ classdef ChaserMHE
         end
 
         %setup constraints 
-        function setupEqualityConstraints()
+        function setupDynamicConstraints()
         end
         function setupInequalityConstraints()
         end
@@ -35,13 +43,33 @@ classdef ChaserMHE
 
     end
     methods 
-        function initMHE(obj, traj0, n_horizon)
+        function obj = initMHE(obj, traj0, n_horizon, tstep)
+            obj.n_horizon = n_horizon;
+            obj.window_states = zeros(6,n_horizon);
+
+            [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
+            obj.window_states(:,1) = traj0;
+            for i = 2:n_horizon
+                obj.window_states = A*obj.window_states(:,i-1);
+            end
+            obj.window_measError = zeros(3,n_horizon);
+            obj.window_stateError = zeros(6,n_horizon);
         end
 
         %window functions
         function vector = windowsToVector(obj)
         end
-        function obj = windowShift(obj, meas)
+        function obj = windowShift(obj, meas, tstep)
+            [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
+            [dim,num] = size(obj.window_measurements);
+            if num < obj.n_horizon
+                obj.window_measurements = [obj.window_measurements, ChaserMHE.senseModify(meas)];
+            else
+                obj.window_measurements = [obj.window_measurements(:,2:obj.n_horizon), ChaserMHE.senseModify(meas)];
+                obj.window_states = [obj.window_states(:,2:obj.n_horizon), A*obj.window_states(:,obj.n_horizon)];
+                obj.window_stateError = [obj.window_stateError(:,2:obj.n_horizon), zeros(6,1)];
+                obj.window_measError = [obj.window_measError(:,2:obj.n_horizon), zeros(3,1)];
+            end
         end
 
         %optimization functions
