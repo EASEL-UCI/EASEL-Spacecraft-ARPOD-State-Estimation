@@ -1,23 +1,59 @@
 classdef ChaserMHE
     properties 
-        window_states
-        window_sensors
+        n_horizon
+        window_measurements % these are observed in simulation
+        window_states %these are windows of states
+        window_stateError % windows of state errors in optimization
+        window_measError % windows of measurement errors in optimization
         state
 
         %optional feature: forgetting factor. Almost opposite to a discount
         %factor.
     end
-    methods 
+    methods (Static)
+        %{
+            Vector: [x0:N ... w0:N ... v0:N]
+            NOTE: v changes according to the phase
+        %}
+
+        %setup cost functions
         function objective = quadraticCost()
+            % cost function with relation to additive costs quadraticically
         end
         function objective = loglikelihoodCost()
         end
-        function setupConstraints()
+
+        %setup constraints 
+        function setupEqualityConstraints()
         end
+        function setupInequalityConstraints()
+        end
+
+        %convert trajectory into windows for MHE
+        function vectorToWindows()
+        end
+
+    end
+    methods 
+        function initMHE(obj, traj0, n_horizon)
+        end
+
+        %window functions
+        function vector = windowsToVector(obj)
+        end
+        function obj = windowShift(obj, meas)
+        end
+
+        %optimization functions
         function warmStart()
         end
         function optimize()
         end
+
+        %estimate (piecing it together)
+        function estimate() %ducktyping for all state estimators
+        end        
+
     end
     methods (Static)
         function next_state = linearDynamics(x, u, R, T)
