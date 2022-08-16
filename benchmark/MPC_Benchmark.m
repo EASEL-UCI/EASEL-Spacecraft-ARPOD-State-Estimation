@@ -60,7 +60,7 @@ end
         2: Particle Filter
         3: Moving Horizon Estimator
 %}
-stateEstimatorOption = 1;
+stateEstimatorOption = 3;
 
 %Setting up State Estimator Q and R matrices
 %{
@@ -93,7 +93,14 @@ elseif (stateEstimatorOption == 2)
     seQ = scale_Q*diag([1,1,1,0.1,0.1,0.1]);
     seR = scale_R*diag([1,1,0.00001]);
 else
-    %
+    %moving horizon estimator
+    stateEstimator = ChaserMHE;
+
+    mhe_horizon = 10;
+    forget_factor = 1;
+
+    sense = ARPOD_Benchmark.sensor(traj, @() [0;0;0], phase);
+    stateEstimator = stateEstimator.initMHE(traj,sense,mhe_horizon, forget_factor, tstep);
 end
 
 %setting up gaussian noise models
@@ -110,7 +117,6 @@ noiseP = @() max(min(transpose(scale_dynamicNoise*mvnrnd([0;0;0;0;0;0], [1,1,1,0
 stats = ARPOD_Statistics;
 stats = stats.initBenchmark(traj);
 
-sense = ARPOD_Benchmark.sensor(traj, @() [0;0;0], phase);
 estTraj = traj;
 
 

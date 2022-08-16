@@ -5,6 +5,7 @@ classdef ChaserMHE
         window_states %these are windows of states
         window_stateError % windows of state errors in optimization
         window_measError % windows of measurement errors in optimization
+        window_control = [];
         state
 
         forget_factor;
@@ -75,43 +76,9 @@ classdef ChaserMHE
             objective = @log_quadcost;
         end
 
-        %setup constraints 
-        function ceq = setupDynamicConstraints(vector, horizon)
-
-        end
-        function ceq = setupMeasurementConstraints(vector, horizon)
-
-        end
-        function nonlcon = setupEqualityConstraints(vector, horizon)
-            %{
-            function [c,ceq] = nonlcon(x)
-                c = 0; %no inequality constraints
-
-                xt = x(1:6*N,:);
-                wt = x(6*N+1:12*N,:);
-                vt = x(12*N+1:(12+meas_size)*N,:);
-
-                ceq = zeros(meas_size*N+6*N+6,1);
-                for i = 1:N
-                    xi = xt(6*(i-1)+1:6*i,:);
-                    if i < N
-                        xi1 = xt(6*i+1:6*(i+1),:);
-                        wi = wt(6*(i-1)+1:6*i,:);
-                        ceq(meas_size*N+6*(i-1)+1:meas_size*N+6*i,:) = ChaserMHE.linearDynamics(xi,u(:,i), R, tstep) + wi - xi1;
-                    end
-                    hi = ARPOD_Sensing.measure(xi);
-                    vi = vt(1+meas_size*(i-1):meas_size*i,:);
-                    ceq(meas_size*(i-1)+1:meas_size*i,:) = hi + vi - measurements(:,i);
-                end
-                ceq(meas_size*N+6*N+1:meas_size*N+6*N+6,:) = x(1:6,:) - traj0;
-            end
-            %}
-            
-        end
-
     end
     methods 
-        function obj = initMHE(obj, traj0, n_horizon, forget_factor, tstep)
+        function obj = initMHE(obj, traj0, meas, n_horizon, forget_factor, tstep)
             obj.n_horizon = n_horizon;
             window_state = zeros(6,n_horizon);
 
@@ -124,6 +91,8 @@ classdef ChaserMHE
             obj.window_stateError = zeros(6,n_horizon);
             obj.window_states = window_state;
             obj.forget_factor = forget_factor;
+
+            obj.window_measurements = ChaserMHE.senseModify(meas);
         end
 
         %window functions
@@ -160,130 +129,98 @@ classdef ChaserMHE
             %return obj
         end
 
-        function obj = windowShift(obj, meas, tstep)
+        function obj = windowShift(obj, meas, control, tstep)
             [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
             [dim,num] = size(obj.window_measurements);
             if num < obj.n_horizon
                 obj.window_measurements = [obj.window_measurements, ChaserMHE.senseModify(meas)];
             else
                 obj.window_measurements = [obj.window_measurements(:,2:obj.n_horizon), ChaserMHE.senseModify(meas)];
-                obj.window_states = [obj.window_states(:,2:obj.n_horizon), A*obj.window_states(:,obj.n_horizon)];
+                obj.window_states = [obj.window_states(:,2:obj.n_horizon), A*obj.window_states(:,obj.n_horizon) + B*control];
                 obj.window_stateError = [obj.window_stateError(:,2:obj.n_horizon), zeros(6,1)];
                 obj.window_measError = [obj.window_measError(:,2:obj.n_horizon), zeros(3,1)];
+
+                obj.window_control = [obj.window_control, control];
             end
+        end
+
+
+        function ceq = setupDynamicConstraints(obj, vector, horizon, tstep)
+            ceq = [];
+            ceq = vector(1:6,:) - obj.window_states(:,1); % set x0 - xbar0 = 0;
+            [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
+            for i = 1:horizon-1
+                control = obj.window_control(:,i-1);
+
+                state_idx = 6*(i-1)+1;
+                stateE_idx = 6*horizon+state_idx;
+                state_ = vector(state_idx:state_idx+5,:);
+
+                stateE_ = vector(stateE_idx:stateE_idx+5,:);
+
+                next_state_ = vector(state_idx+6:state_idx+11,:);
+
+                ceq = [ceq; A*state_ + B*control + stateE_ - next_state_];  % Ax + Bu + vk - x_k+1 = 0
+            end
+        end
+        function ceq = setupMeasurementConstraints(obj, vector, horizon)
+            ceq = [];
+            for i = 1:horizon
+                state_idx = 6*(i-1)+1;
+                meas_idx = 3*(i-1)+1;
+                measE_idx = 12*horizon+meas_idx;
+
+                state_ = vector(state_idx:state_idx+5,:);
+
+                meas = obj.window_measurements(:,i);
+                measE_ = vector(measE_idx:measE_idx+2,:);
+
+                state_meas = ARPOD_Benchmark.sensor(state_, @() zeros(6,1), 2);
+                if meas(2) == 0
+                    state_meas(2) = 0;
+                end
+                ceq = [ceq; state_meas + measE_ - meas]; % g(x_k) + w_k - y_k = 0
+            end
+        end
+        function nonlcon = setupEqualityConstraints(obj, horizon, tstep)
+            function [c,ceq] = constrF(x)
+                c = 0;
+                ceq = obj.setupDynamicConstraints(x,horizon, tstep);
+                ceq = [ceq; obj.setupMeasurementConstraints(x,horizon);];
+            end
+            nonlcon = @constrF;
         end
 
         %optimization functions
-        function optimize()
+        function obj = optimize(obj, Q_cov, R_cov, tstep)
             [dim, horizon] = size(obj.window_measurements);
+            nonlcon = obj.setupEqualityConstraints(horizon, tstep);
+            objective = ChaserMHE.quadraticCost(horizon, Q_cov, R_cov, obj.forget_factor);
 
+            x0 = obj.windowsToVector();
+            A = [];
+            B = [];
+            Aeq = [];
+            beq = [];
+            lb = ones(length(x0),1) - Inf;
+            ub = -lb;
+
+            options = optimoptions(@fmincon, 'Algorithm', 'sqp', 'MaxIterations', 1000, 'ConstraintTolerance', 1e-6);
+            xstar = fmincon(objective, x0, A, b, Aeq, beq, lb, ub, nonlcon, options);
+            %
+            if xstar == []
+                error("Optimization went wrong!!");
+            end
+            obj = obj.vectorToWindows(xstar);
         end
 
         %estimate (piecing it together)
-        function estimate() %ducktyping for all state estimators
+        function obj = estimate(obj, control, measurement, Q_cov, R_cov,tstep,phase) %ducktyping for all state estimators
+            obj = obj.windowShift(measurement,control,tstep);
+            obj = obj.optimize(Q_cov,R_cov,tstep);
+
+            obj.state = obj.window_states(:,length(obj.window_states));
         end        
 
     end
-    %{
-    methods (Static)
-        function next_state = linearDynamics(x, u, R, T)
-            mu_GM = 398600.4; %km^2/s^2;
-
-            n = sqrt(mu_GM / (R.^3) );
-            A = zeros(6,6);
-            B = zeros(6,3);
-            S = sin(n * T);
-            C = cos(n * T);
-
-            A(1,:) = [4-3*C,0,0,S/n,2*(1-C)/n,0];
-            A(2,:) = [6*(S-n*T),1,0,-2*(1-C)/n,(4*S-3*n*T)/n,0];
-            A(3,:) = [0,0,C,0,0,S/n];
-            A(4,:) = [3*n*S,0,0,C,2*S,0];
-            A(5,:) = [-6*n*(1-C),0,0,-2*S,4*C-3,0];
-            A(6,:) = [0,0,-n*S,0,0,C];
-
-            B(1,:) = [(1-C)/(n*n),(2*n*T-2*S)/(n*n),0];
-            B(2,:) = [-(2*n*T-2*S)/(n*n),(4*(1-C)/(n*n))-(3*T*T/2),0];
-            B(3,:) = [0,0,(1-C)/(n*n)];
-            B(4,:) = [S/n,2*(1-C)/n, 0];
-            B(5,:) = [-2*(1-C)/n,(4*S/n) - (3*T),0];
-            B(6,:) = [0,0,S/n];
-
-            next_state = A*x + B*u;
-        end
-        function states = optimize(measurements, u, state0, traj0, weightW, weightV, N, tstep, R, options)
-            %{
-                measuremnts shape: (3,N)
-                tra j0 shape: (6,N)
-                % for now time invariant
-                % looks into forgetting factor (weigh higher newer terms)
-                weightW shape: (6,6,N)
-                weightV shape: (3,3,N)
-                 wT P_w w + vT Pv v
-
-                x0: true value
-                [x0, x1, x2, x3] -> optimize x0->3
-                [x1, x2, x3, x4] -> x1->x4
-                Note: initialize w/ propagating thru dynamics
-                Note: then initialize w/ previous mhe estimates
-            %}
-            [n_V, m_V, step_V] = sizes(weightV);
-            meas_size = n_V;
-            function cost = objective(x)
-                %{
-                    x: x consists of x_0:N, w_0:N, v_0:N (size is 6*N + 6*N
-                    + 3*N, 1)
-                %}
-                wt = x(6*N+1:12*N,:);
-
-                vt = x(12*N+1:(12+meas_size)*N,:);
-                cost = 0;
-                for i = 1:N
-                    wi = wt(1+6*(i-1):6*i,:);
-                    vi = vt(1+(meas_size)*(i-1):(meas_size)*i,:);
-                    cost = cost + wi.' * weightW(:,:,i) * wi;
-                    cost = cost + vi.' * weightV(:,:,i) * vi;
-                end
-                %cost returned
-            end
-
-            function [c,ceq] = nonlcon(x)
-                c = 0; %no inequality constraints
-
-                xt = x(1:6*N,:);
-                wt = x(6*N+1:12*N,:);
-                vt = x(12*N+1:(12+meas_size)*N,:);
-
-                ceq = zeros(meas_size*N+6*N+6,1);
-                for i = 1:N
-                    xi = xt(6*(i-1)+1:6*i,:);
-                    if i < N
-                        xi1 = xt(6*i+1:6*(i+1),:);
-                        wi = wt(6*(i-1)+1:6*i,:);
-                        ceq(meas_size*N+6*(i-1)+1:meas_size*N+6*i,:) = ChaserMHE.linearDynamics(xi,u(:,i), R, tstep) + wi - xi1;
-                    end
-                    hi = ARPOD_Sensing.measure(xi);
-                    vi = vt(1+meas_size*(i-1):meas_size*i,:);
-                    ceq(meas_size*(i-1)+1:meas_size*i,:) = hi + vi - measurements(:,i);
-                end
-                ceq(meas_size*N+6*N+1:meas_size*N+6*N+6,:) = x(1:6,:) - traj0;
-            end
-            %initialize guess (warm starting?)
-            x0 = zeros(15*N,1);
-            [n_dim, n_horizon] = size(state0);
-            x0(1:n_dim*n_horizon,:) = reshape(state0,n_dim*n_horizon,1);
-            A = [];
-            b = [];
-            Aeq = [];
-            beq = [];
-            lb = zeros((12+meas_size)*N,1) - Inf; %have bounds for noise
-            ub = zeros((12+meas_size)*N,1) + Inf; %
-            nonlincon = @nonlcon;
-            xstar = fmincon(@objective, x0, A, b, Aeq, beq, lb, ub, nonlincon, options);
-            xstar_xt = xstar(1:6*N,:);
-
-            states = reshape(xstar_xt,6,N); 
-        end
-    end
-    %}
 end

@@ -34,6 +34,7 @@ classdef ARPOD_Statistics
             obj.trackEstTraj = [obj.trackEstTraj, estTraj];
             obj.trackTraj = [obj.trackTraj, obj.currTraj];
             obj.total_steps = obj.total_steps + 1;
+            obj.timestamps = [obj.timestamps, obj.timestamps(length(obj.timestamps)) + tstep];
         end
         function obj = graphLinear(obj, theta1, theta2)
             %{
@@ -79,11 +80,9 @@ classdef ARPOD_Statistics
             %draw estchaserTraj
             plot3(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b');
             %draw target position
-            %plot3(0,0,0,12,'rx');
-            %draw 4th rendezvous
             %draw chaserStart
             %draw chaserEnd
-            
+            %draw 
             hold off
 
             return;
