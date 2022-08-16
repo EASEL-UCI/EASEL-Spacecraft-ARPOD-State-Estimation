@@ -10,12 +10,23 @@
             Graph should give the estimated trajectory 
 
         TODO: Run MHE
+
+        Tests: different phases
+                changing covairances from the true to measure adaptability
+                (eps)
+                try different initial conditions
+                think of different noise profiles for sensors
+                
+                record MPC for mission characteristics
+                root MSE
+
+                
 %}
 
 %initial parameters
-traj = [-1;-1;1;0.001;0.001;0.001];
+traj = [-0.2;-0.2;0.2;0.001;0.001;0.001];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 500;
+total_time = 100;
 tstep = 1; % update every second
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
@@ -37,7 +48,7 @@ mpc_R = scale_mpcR*eye(3);
         1. Linear MPC --> quadprog
         2. Nonlinear MPC --> fmincon
 %}
-mpc_choice = 2;
+mpc_choice = 1;
 if mpc_choice == 2
     mpc = ChaserNLMPC;
 end

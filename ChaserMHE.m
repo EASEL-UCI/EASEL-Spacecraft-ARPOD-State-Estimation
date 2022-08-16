@@ -7,8 +7,7 @@ classdef ChaserMHE
         window_measError % windows of measurement errors in optimization
         state
 
-        %optional feature: forgetting factor. Almost opposite to a discount
-        %factor.
+        forget_factor;
     end
     methods (Static)
         %{
@@ -18,47 +17,149 @@ classdef ChaserMHE
 
         function modified_sense = senseModify(measurement)
             [dim,i] = size(measurement);
-            modified_sense = modified_measurement;
+            modified_sense = measurement;
             if dim == 2
                 modified_sense(3) = 0;
             end
         end
 
         %setup cost functions
-        function objective = quadraticCost()
+        function objective = quadraticCost(horizon, Q, R, f_factor)
             % cost function with relation to additive costs quadraticically
+            % Q is the weighting matrix for state errors
+            % R is weighting matrix for measurement errors
+            function error = quadcost(x)
+                error = 0;
+                for i = 1:horizon
+                    state_idx = 6*(i-1)+1;
+                    meas_idx = 3*(i-1)+1;
+
+                    stateE_idx = 6*horizon+state_idx;
+                    measE_idx = 12*horizon+meas_idx;
+
+                    stateE = x(stateE_idx:stateE_idx+5,:);
+                    errorState = stateE.' * Q * stateE;
+
+                    measE = x(measE_idx:measE_idx+2,:);
+                    errorMeas = measE.' * R * measE;
+
+                    error = error + f_factor.^(horizon-i) * (errorState + errorMeas);
+                end
+            end
+            objective = @quadcost;
         end
-        function objective = loglikelihoodCost()
+
+        function objective = loglikelihoodCost(horizon, Q, R, f_factor)
+            %
+            %
+            %
+            function error = log_quadcost(x)
+                error = 0;
+                for i = 1:horizon
+                    state_idx = 6*(i-1)+1;
+                    meas_idx = 3*(i-1)+1;
+
+                    stateE_idx = 6*horizon+state_idx;
+                    measE_idx = 12*horizon+meas_idx;
+
+                    stateE = x(stateE_idx:stateE_idx+5,:);
+                    errorState = stateE.' * Q * stateE;
+
+                    measE = x(measE_idx:measE_idx+2,:);
+                    errorMeas = measE.' * R * measE;
+
+                    error = error + f_factor.^(horizon-i) * (errorState + errorMeas);
+                end
+                error = log(error);
+            end
+            objective = @log_quadcost;
         end
 
         %setup constraints 
-        function setupDynamicConstraints()
-        end
-        function setupInequalityConstraints()
-        end
+        function ceq = setupDynamicConstraints(vector, horizon)
 
-        %convert trajectory into windows for MHE
-        function vectorToWindows()
+        end
+        function ceq = setupMeasurementConstraints(vector, horizon)
+
+        end
+        function nonlcon = setupEqualityConstraints(vector, horizon)
+            %{
+            function [c,ceq] = nonlcon(x)
+                c = 0; %no inequality constraints
+
+                xt = x(1:6*N,:);
+                wt = x(6*N+1:12*N,:);
+                vt = x(12*N+1:(12+meas_size)*N,:);
+
+                ceq = zeros(meas_size*N+6*N+6,1);
+                for i = 1:N
+                    xi = xt(6*(i-1)+1:6*i,:);
+                    if i < N
+                        xi1 = xt(6*i+1:6*(i+1),:);
+                        wi = wt(6*(i-1)+1:6*i,:);
+                        ceq(meas_size*N+6*(i-1)+1:meas_size*N+6*i,:) = ChaserMHE.linearDynamics(xi,u(:,i), R, tstep) + wi - xi1;
+                    end
+                    hi = ARPOD_Sensing.measure(xi);
+                    vi = vt(1+meas_size*(i-1):meas_size*i,:);
+                    ceq(meas_size*(i-1)+1:meas_size*i,:) = hi + vi - measurements(:,i);
+                end
+                ceq(meas_size*N+6*N+1:meas_size*N+6*N+6,:) = x(1:6,:) - traj0;
+            end
+            %}
+            
         end
 
     end
     methods 
-        function obj = initMHE(obj, traj0, n_horizon, tstep)
+        function obj = initMHE(obj, traj0, n_horizon, forget_factor, tstep)
             obj.n_horizon = n_horizon;
-            obj.window_states = zeros(6,n_horizon);
+            window_state = zeros(6,n_horizon);
 
             [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
-            obj.window_states(:,1) = traj0;
+            window_state(:,1) = traj0;
             for i = 2:n_horizon
-                obj.window_states = A*obj.window_states(:,i-1);
+                window_state(:,i) = A*window_state(:,i-1);
             end
             obj.window_measError = zeros(3,n_horizon);
             obj.window_stateError = zeros(6,n_horizon);
+            obj.window_states = window_state;
+            obj.forget_factor = forget_factor;
         end
 
         %window functions
         function vector = windowsToVector(obj)
+            [dim, horizon] = size(obj.window_measurements);
+            vector = [];
+            for i = 1:horizon
+                vector = [vector; obj.window_states(:,i)];
+            end
+            for i = 1:horizon
+                vector = [vector; obj.window_stateError(:,i)];
+            end
+            for i = 1:horizon
+                vector = [vector; obj.window_measError(:,i)];
+            end
+            %vector is now [ all states, all state errors, all measurement
+            %errors]
         end
+
+        function obj = vectorToWindows(obj, vector)
+            %go from vector to windows for object
+            [dim, horizon] = size(obj.window_measurements);
+
+            for i = 1:horizon
+                state_idx = 6*(i-1)+1;
+                meas_idx = 3*(i-1)+1;
+
+                stateE_idx = 6*horizon+state_idx;
+                measE_idx = 12*horizon+meas_idx;
+                obj.window_states(:,i) = vector(state_idx:state_idx+5,:);
+                obj.window_stateError(:,i) = vector(stateE_idx:stateE_idx+5,:);
+                obj.window_measError(:,i) = vector(measE_idx:measE_idx+2,:);
+            end
+            %return obj
+        end
+
         function obj = windowShift(obj, meas, tstep)
             [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
             [dim,num] = size(obj.window_measurements);
@@ -73,9 +174,9 @@ classdef ChaserMHE
         end
 
         %optimization functions
-        function warmStart()
-        end
         function optimize()
+            [dim, horizon] = size(obj.window_measurements);
+
         end
 
         %estimate (piecing it together)
@@ -83,6 +184,7 @@ classdef ChaserMHE
         end        
 
     end
+    %{
     methods (Static)
         function next_state = linearDynamics(x, u, R, T)
             mu_GM = 398600.4; %km^2/s^2;
@@ -117,7 +219,7 @@ classdef ChaserMHE
                 % looks into forgetting factor (weigh higher newer terms)
                 weightW shape: (6,6,N)
                 weightV shape: (3,3,N)
-                (x0 - xbar0)*weight0*(x0-xbar0) + wT P_w w + vT Pv v
+                 wT P_w w + vT Pv v
 
                 x0: true value
                 [x0, x1, x2, x3] -> optimize x0->3
@@ -183,4 +285,5 @@ classdef ChaserMHE
             states = reshape(xstar_xt,6,N); 
         end
     end
+    %}
 end
