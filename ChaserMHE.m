@@ -15,6 +15,18 @@ classdef ChaserMHE
             Vector: [x0:N ... w0:N ... v0:N]
             NOTE: v changes according to the phase
         %}
+        function [xt,wt,vt] = vectorIterationHelper(vector, horizon)
+            N = horizon;
+            xt = vector(1:6*N,:);
+            wt = vector(6*N+1:12*N,:);
+            vt = vector(12*N+1:15*N,:);
+        end
+
+        function [xi,wi,vi] = vectorIndexHelper(xt,wt,vt, i)
+            xi = xt(6*(i-1)+1:6*i,:);
+            wi = wt(6*(i-1)+1:6*i,:);
+            vi = vt(3*(i-1)+1:3*i,:);
+        end
 
         function modified_sense = senseModify(measurement)
             [dim,i] = size(measurement);
@@ -31,17 +43,13 @@ classdef ChaserMHE
             % R is weighting matrix for measurement errors
             function error = quadcost(x)
                 error = 0;
+                [xt,wt,vt] = ChaserMHE.vectorIterationHelper(x,horizon);
                 for i = 1:horizon
-                    state_idx = 6*(i-1)+1;
-                    meas_idx = 3*(i-1)+1;
-
-                    stateE_idx = 6*horizon+state_idx;
-                    measE_idx = 12*horizon+meas_idx;
-
-                    stateE = x(stateE_idx:stateE_idx+5,:);
+                    [xi,wi,vi] = ChaserMHE.vectorIndexHelper(xt,wt,vt,i);
+                    stateE = wi;
                     errorState = stateE.' * Q * stateE;
 
-                    measE = x(measE_idx:measE_idx+2,:);
+                    measE = vi;
                     errorMeas = measE.' * R * measE;
 
                     error = error + f_factor.^(horizon-i) * (errorState + errorMeas);
@@ -56,17 +64,14 @@ classdef ChaserMHE
             %
             function error = log_quadcost(x)
                 error = 0;
+
+                [xt,wt,vt] = ChaserMHE.vectorIterationHelper(x,horizon);
                 for i = 1:horizon
-                    state_idx = 6*(i-1)+1;
-                    meas_idx = 3*(i-1)+1;
-
-                    stateE_idx = 6*horizon+state_idx;
-                    measE_idx = 12*horizon+meas_idx;
-
-                    stateE = x(stateE_idx:stateE_idx+5,:);
+                    [xi,wi,vi] = ChaserMHE.vectorIndexHelper(xt,wt,vt,i);
+                    stateE = wi;
                     errorState = stateE.' * Q * stateE;
 
-                    measE = x(measE_idx:measE_idx+2,:);
+                    measE = vi;
                     errorMeas = measE.' * R * measE;
 
                     error = error + f_factor.^(horizon-i) * (errorState + errorMeas);
@@ -116,15 +121,12 @@ classdef ChaserMHE
             %go from vector to windows for object
             [dim, horizon] = size(obj.window_measurements);
 
+            [xt,wt,vt] = ChaserMHE.vectorIterationHelper(vector, horizon);
             for i = 1:horizon
-                state_idx = 6*(i-1)+1;
-                meas_idx = 3*(i-1)+1;
-
-                stateE_idx = 6*horizon+state_idx;
-                measE_idx = 12*horizon+meas_idx;
-                obj.window_states(:,i) = vector(state_idx:state_idx+5,:);
-                obj.window_stateError(:,i) = vector(stateE_idx:stateE_idx+5,:);
-                obj.window_measError(:,i) = vector(measE_idx:measE_idx+2,:);
+                [xi,wi,vi] = ChaserMHE.vectorIndexHelper(xt,wt,vt,i);
+                obj.window_states(:,i) = xi;
+                obj.window_stateError(:,i) = wi;
+                obj.window_measError(:,i) = vi;
             end
             %return obj
         end
@@ -132,6 +134,7 @@ classdef ChaserMHE
         function obj = windowShift(obj, meas, control, tstep)
             [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
             [dim,num] = size(obj.window_measurements);
+
             if num < obj.n_horizon
                 obj.window_measurements = [obj.window_measurements, ChaserMHE.senseModify(meas)];
             else
@@ -140,8 +143,8 @@ classdef ChaserMHE
                 obj.window_stateError = [obj.window_stateError(:,2:obj.n_horizon), zeros(6,1)];
                 obj.window_measError = [obj.window_measError(:,2:obj.n_horizon), zeros(3,1)];
 
-                obj.window_control = [obj.window_control, control];
             end
+            obj.window_control = [obj.window_control, control];
         end
 
 
@@ -149,33 +152,35 @@ classdef ChaserMHE
             ceq = [];
             ceq = vector(1:6,:) - obj.window_states(:,1); % set x0 - xbar0 = 0;
             [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
+
+
+            [xt,wt,vt] = ChaserMHE.vectorIterationHelper(vector, horizon);
             for i = 1:horizon-1
-                control = obj.window_control(:,i-1);
+                [xi,wi,vi] = ChaserMHE.vectorIndexHelper(xt,wt,vt,i);
+                control = obj.window_control(:,i);
 
-                state_idx = 6*(i-1)+1;
-                stateE_idx = 6*horizon+state_idx;
-                state_ = vector(state_idx:state_idx+5,:);
+                state_ = xi;
 
-                stateE_ = vector(stateE_idx:stateE_idx+5,:);
+                stateE_ = wi;
 
-                next_state_ = vector(state_idx+6:state_idx+11,:);
+                %an offcase for the vectorIndexHelper
+                next_state_ = xt(6*(i)+1:6*(i+1),:);
 
                 ceq = [ceq; A*state_ + B*control + stateE_ - next_state_];  % Ax + Bu + vk - x_k+1 = 0
             end
         end
         function ceq = setupMeasurementConstraints(obj, vector, horizon)
             ceq = [];
+            [xt,wt,vt] = ChaserMHE.vectorIterationHelper(vector, horizon);
             for i = 1:horizon
-                state_idx = 6*(i-1)+1;
-                meas_idx = 3*(i-1)+1;
-                measE_idx = 12*horizon+meas_idx;
 
-                state_ = vector(state_idx:state_idx+5,:);
+                [xi,wi,vi] = ChaserMHE.vectorIndexHelper(xt,wt,vt,i);
+                state_ = xi;
 
                 meas = obj.window_measurements(:,i);
-                measE_ = vector(measE_idx:measE_idx+2,:);
+                measE_ = vi;
 
-                state_meas = ARPOD_Benchmark.sensor(state_, @() zeros(6,1), 2);
+                state_meas = ARPOD_Benchmark.sensor(state_, @() zeros(3,1), 2);
                 if meas(2) == 0
                     state_meas(2) = 0;
                 end
@@ -194,12 +199,13 @@ classdef ChaserMHE
         %optimization functions
         function obj = optimize(obj, Q_cov, R_cov, tstep)
             [dim, horizon] = size(obj.window_measurements);
+
             nonlcon = obj.setupEqualityConstraints(horizon, tstep);
             objective = ChaserMHE.quadraticCost(horizon, Q_cov, R_cov, obj.forget_factor);
 
             x0 = obj.windowsToVector();
             A = [];
-            B = [];
+            b = [];
             Aeq = [];
             beq = [];
             lb = ones(length(x0),1) - Inf;
@@ -208,7 +214,8 @@ classdef ChaserMHE
             options = optimoptions(@fmincon, 'Algorithm', 'sqp', 'MaxIterations', 1000, 'ConstraintTolerance', 1e-6);
             xstar = fmincon(objective, x0, A, b, Aeq, beq, lb, ub, nonlcon, options);
             %
-            if xstar == []
+            [dim, horizon] = size(xstar);
+            if horizon == 0
                 error("Optimization went wrong!!");
             end
             obj = obj.vectorToWindows(xstar);

@@ -50,7 +50,7 @@ classdef ARPOD_Statistics
                     - Phase 3 boundary
             %}
 
-            figure 
+            figure(1)
             %draw phase 2 sphere boundary
             [x,y,z] = sphere(10);
             r = ARPOD_Benchmark.rho_r;
@@ -83,7 +83,24 @@ classdef ARPOD_Statistics
             %draw chaserStart
             %draw chaserEnd
             %draw 
+            title("Chaser Trajectory");
+            xlabel("x");
+            ylabel("y");
+            zlabel("z");
             hold off
+
+            figure(2)
+            plot(obj.timestamps, obj.trackFuelConsumption, 'b');
+            title("Time vs. Total Fuel Consumed");
+            xlabel("time (in seconds)");
+            ylabel("Fuel in kg*m/s");
+
+            figure(3)
+            sq_error = sum((obj.trackTraj - obj.trackEstTraj).^2);
+            plot(obj.timestamps, sq_error, 'r');
+            title("Squared Error of Trajectory Over Time")
+            xlabel("time (in seconds)")
+            ylabel("Squared Error");
 
             return;
         end

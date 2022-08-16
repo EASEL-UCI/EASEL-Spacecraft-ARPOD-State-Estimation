@@ -11,6 +11,7 @@ classdef ChaserPF
             rand = mvnrnd(mu,cov,1);
         end
         function indexes = sample_particles(weights)
+            disp(weights);
             [N,dim] = size(weights);
             indexes = randsample(N,N,true,weights.');
         end
