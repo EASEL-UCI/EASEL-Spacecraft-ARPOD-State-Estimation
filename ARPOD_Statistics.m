@@ -79,6 +79,7 @@ classdef ARPOD_Statistics
             plot3(obj.trackTraj(1,:), obj.trackTraj(2,:), obj.trackTraj(3,:), 'r');
             %draw estchaserTraj
             plot3(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b');
+
             %draw target position
             %draw chaserStart
             %draw chaserEnd
@@ -101,6 +102,13 @@ classdef ARPOD_Statistics
             title("Squared Error of Trajectory Over Time")
             xlabel("time (in seconds)")
             ylabel("Squared Error");
+
+            figure(4)
+            plot(obj.trackTraj(1,:), obj.trackTraj(2,:), 'r');
+            plot(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), 'b');
+            title('Chaser Trajectory 2D')
+            xlabel("x");
+            ylabel("y");
 
             return;
         end

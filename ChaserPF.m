@@ -11,7 +11,6 @@ classdef ChaserPF
             rand = mvnrnd(mu,cov,1);
         end
         function indexes = sample_particles(weights)
-            disp(weights);
             [N,dim] = size(weights);
             indexes = randsample(N,N,true,weights.');
         end
@@ -36,13 +35,13 @@ classdef ChaserPF
             %}
             ESS = 1/sum(obj.weights.^2);
             if (ESS < obj.ESS_Threshold)
-                %resample
                 old_particles = obj.particles;
-                idx_particles = ChaserPF.sample_particles(obj.particles);
-                for i =1:obj.n_particles
+                idx_particles = ChaserPF.sample_particles(obj.weights);
+                for i = 1:obj.n_particles
                     j = idx_particles(i);
                     obj.particles(:,i) = old_particles(:,j);
                 end
+                N = obj.n_particles;
                 obj.weights = ones(N,1)/N;
             end
         end        
@@ -56,6 +55,7 @@ classdef ChaserPF
         function obj = particlesUpdate(obj, measurement, Q_cov, R_cov, u, tstep, phase)
             [dim,N] = size(obj.particles);
 
+
             idx_particles = ChaserPF.sample_particles(obj.weights);
             new_particles = zeros(dim,N);
             new_weights = zeros(N,1);
@@ -65,12 +65,15 @@ classdef ChaserPF
                 R_cov = R_cov(1:2,1:2);
             end
 
+            [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
             for i = 1:N
                 j = idx_particles(i);
-                prop = ARPOD_Benchmark.nextStep(obj.particles(:,j), u,tstep,@() [0;0;0;0;0;0], 1);
+                %prop = ARPOD_Benchmark.nextStep(obj.particles(:,j), u,tstep,@() [0;0;0;0;0;0], 1);
+                prop = A*obj.particles(:,j) + B*u;
+
                 new_particles(:,i) = ChaserPF.sample_gaussian(prop,Q_cov);
 
-                estimated_measurement = ARPOD_Benchmark.sensor(prop, @() [0;0;0], phase);
+                estimated_measurement = ARPOD_Benchmark.sensor(new_particles(:,i), @() [0;0;0], phase);
                 new_weights(i) = abs(mvnpdf(measurement, estimated_measurement, R_cov));
                 sum_weights = sum_weights + new_weights(i);
             end
