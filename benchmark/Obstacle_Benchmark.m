@@ -11,13 +11,14 @@
 
 
         Tests: different phases
-                try init MHE w/ EKF
+                changing covairances from the true to measure adaptability
+                (eps)
+                try different initial conditions
                 think of different noise profiles for sensors
-
-                add process noise 5% (std: 0.05)
-
-                use NERM equations w/ elliptical orbit
                 
+                record MPC for mission characteristics
+                root MSE
+
                 
 %}
 rng(1);
@@ -27,7 +28,7 @@ rng(1);
 %traj = [-0.2;-0.2;0.2;0.001;0.001;0.001];
 traj = [-10;-10;10;0.01;0.0001;0.0001];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 120;
+total_time = 100;
 tstep = 5; % update every second
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
@@ -95,7 +96,7 @@ else
     %moving horizon estimator
     stateEstimator = ChaserMHE;
 
-    mhe_horizon = 10;
+    mhe_horizon = 20;
     forget_factor = 1;
 
 
@@ -165,5 +166,3 @@ end
 
 %graph results
 stats.graphLinear(pi/3,pi/3);
-
-

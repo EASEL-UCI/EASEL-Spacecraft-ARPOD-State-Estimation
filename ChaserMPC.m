@@ -221,9 +221,10 @@ classdef ChaserMPC
             end
             [n,m] = size(A);
             b = zeros(n,1);
-            options = optimoptions(@quadprog, 'Algorithm', 'active-set');
+            %options = optimoptions(@quadprog, 'Algorithm', 'active-set');
             x0 = zeros(length(H),1);
-            final = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
+            %final = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
+            final = quadprog(H,f,A,b,Aeq,beq,lb,ub);
 
             [xs,us] = ChaserMPC.extractOptVector(final, n_horizon);
         end

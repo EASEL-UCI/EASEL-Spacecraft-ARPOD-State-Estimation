@@ -93,7 +93,7 @@ classdef ChaserMHE
                 window_state(:,i) = A*window_state(:,i-1);
             end
             obj.window_measError = 100*ones(3,n_horizon);
-            obj.window_stateError = zeros(6,n_horizon);
+            obj.window_stateError = 100*ones(6,n_horizon);
             obj.window_states = window_state;
             obj.forget_factor = forget_factor;
 
@@ -146,7 +146,7 @@ classdef ChaserMHE
 
                 obj.window_measurements = [obj.window_measurements(:,2:obj.n_horizon), ChaserMHE.senseModify(meas)];
                 obj.window_states = [obj.window_states(:,2:obj.n_horizon), A*obj.window_states(:,obj.n_horizon) + B*control];
-                obj.window_stateError = [obj.window_stateError(:,2:obj.n_horizon), zeros(6,1)];
+                obj.window_stateError = [obj.window_stateError(:,2:obj.n_horizon), 100*ones(6,1)];
 
                 state_meas = ARPOD_Benchmark.sensor(obj.window_states(:,obj.n_horizon),@() [0;0;0], 2);
                 error = ChaserMHE.senseModify(meas) - state_meas;
@@ -221,7 +221,8 @@ classdef ChaserMHE
             lb = ones(length(x0),1) - Inf;
             ub = ones(length(x0),1) + Inf;
 
-            options = optimoptions(@fmincon, 'Algorithm', 'sqp', 'MaxIterations', 2000, 'ConstraintTolerance', 1e-12);
+            %options = optimoptions(@fmincon, 'Algorithm', 'interior-point', 'MaxIterations', 2000, 'ConstraintTolerance', 1e-12, "EnableFeasibilityMode",true, "HonorBounds", true);
+            options = optimoptions(@fmincon, 'Algorithm', 'sqp', 'MaxIterations', 2000, 'ConstraintTolerance', 1e-6);
             xstar = fmincon(objective, x0, A, b, Aeq, beq, lb, ub, nonlcon, options);
             %
             [dim, horizon] = size(xstar);
