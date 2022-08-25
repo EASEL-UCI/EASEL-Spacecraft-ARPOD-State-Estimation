@@ -25,16 +25,17 @@ rng(1);
 
 %initial parameters
 %traj = [-0.2;-0.2;0.2;0.001;0.001;0.001];
-traj = [-10;-10;10;0.01;0.0001;0.0001];
+%traj = [-6;-6;6;0.01;0.0001;0.0001];
+traj = [-10;0;0;-0.01;0.001;0.001];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 120;
+total_time = 2000;
 tstep = 5; % update every second
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
 %MPC parameters
-mpc_horizon = 50;
+mpc_horizon = 20;
 scale_mpcQ = 1;
-scale_mpcR = 10;
+scale_mpcR = 100;
 mpc_Q = scale_mpcQ*[1,0,0,0,0,0;
         0,1,0,0,0,0;
         0,0,1,0,0,0;
@@ -61,7 +62,7 @@ end
         2: Particle Filter
         3: Moving Horizon Estimator
 %}
-stateEstimatorOption = 3;
+stateEstimatorOption = 2;
 
 %Setting up State Estimator Q and R matrices
 %{
@@ -139,7 +140,15 @@ for i = tstep:tstep:total_time
 
 
     if mpc_choice == 1 %linear
-        u = ChaserMPC.controlMPC(traj,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase);
+
+        if (i == tstep)
+            x0 = -1;
+            [x0,u] = ChaserMPC.controlMPC(traj,x0,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase);
+        else
+            [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
+            x0 = [ x0(10:end,:); [0;0;0]; A*x0(end-5:end)];
+            [x0,u] = ChaserMPC.controlMPC(traj,x0,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase);
+        end
     else %nonlinear 
         mpc = mpc.controlMPC(traj, mpc_Q, mpc_R, tstep, mpc_horizon, ARPOD_Benchmark.m_c, phase);
         u = mpc.warm_u(:,1);
@@ -157,13 +166,14 @@ for i = tstep:tstep:total_time
 
     stats = stats.updateBenchmark(u, ARPOD_Benchmark.m_c, traj, estTraj, tstep, phase);
 
-    if sqrt(traj(1).^2 + traj(2).^2 + traj(3).^2) < 0.001
+    if sqrt(traj(1).^2 + traj(2).^2 + traj(3).^2) < 1e-3
         disp("Docked Early")
         break
     end
 end
 
 %graph results
-stats.graphLinear(pi/3,pi/3);
+theta = 60;
+stats.graphLinear(theta * pi / 180,theta * pi / 180);
 
 

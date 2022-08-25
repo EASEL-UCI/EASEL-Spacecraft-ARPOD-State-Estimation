@@ -27,6 +27,38 @@ classdef ChaserMPC
             f = zeros(ndim,1);
             H = sparse(diag(H));
         end
+        function f = setupLOSRelaxation(LOS_scale, n_horizon)
+
+            %{
+            theta1 = ARPOD_Benchmark.theta * pi / 180;
+            theta2 = theta1;
+            LOS = [ sin(theta1/2), cos(theta1/2), 0; 
+                    sin(theta1/2), -cos(theta1/2), 0;
+                    sin(theta2/2), 0, cos(theta2/2);
+                    sin(theta2/2), 0, -cos(theta2/2)];
+            LOS_mtx = [LOS, zeros(4,3)];
+
+            sumCols = LOS_mtx(1,:) + LOS_mtx(2,:) + LOS_mtx(3,:) + LOS_mtx(4,:);
+            f = [];
+            for i = 1:n_horizon
+                if i ~= n_horizon
+                    f = [f;sumCols.'; [0;0;0]];
+                else
+                    f = [f;sumCols.'];
+                end
+            end
+            f = LOS_scale * f;
+            %}
+            f = [];
+            for i = 1:n_horizon
+                if i ~= n_horizon
+                    f = [f;[-1;0;0;0;0;0]; [0;0;0]];
+                else
+                    f = [f;[-1;0;0;0;0;0]];
+                end
+            end
+            f = -LOS_scale * f;
+        end
         function [Aeq, beq] = setupLinearConstraints(traj0, tstep, n_horizon)
             %{
                 Parameters:
@@ -169,7 +201,7 @@ classdef ChaserMPC
                 end
             end
         end
-        function [xs,us] = optimizeLinear(traj0, Q, R, n_horizon, tstep, mass, phase)
+        function [xs,us, xstar] = optimizeLinear(traj0, x0, Q, R, n_horizon, tstep, mass, phase)
             %{
                 Parameters:
                 ------------
@@ -195,6 +227,12 @@ classdef ChaserMPC
             [H,f] = ChaserMPC.setupQuadraticCost(Q,R,n_horizon);
             % cost function -> z^THz + f^Tz
 
+            
+            if phase == 2
+                %f = ChaserMPC.setupLOSRelaxation(1e10,n_horizon);
+                traj0 = traj0 + [3*ARPOD_Benchmark.rho_d/4;0;0;0;0;0];
+            end
+            
 
             %setting up equality constraint (dynamics)
             [Aeq, beq] = ChaserMPC.setupLinearConstraints(traj0, tstep, n_horizon);
@@ -221,14 +259,23 @@ classdef ChaserMPC
             end
             [n,m] = size(A);
             b = zeros(n,1);
-            %options = optimoptions(@quadprog, 'Algorithm', 'active-set');
-            x0 = zeros(length(H),1);
-            %final = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
-            final = quadprog(H,f,A,b,Aeq,beq,lb,ub);
+
+            if x0 == -1
+                x0 = zeros(length(H), 1);
+            end
+
+            if phase == 3
+                options = optimoptions(@quadprog, 'Algorithm', 'active-set');
+            else
+                options = optimoptions(@quadprog, 'Algorithm', 'interior-point-convex');
+            end
+            final = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
+            %final = quadprog(H,f,A,b,Aeq,beq,lb,ub);
 
             [xs,us] = ChaserMPC.extractOptVector(final, n_horizon);
+            xstar = final;
         end
-        function u = controlMPC(traj0, Q, R, n_horizon, tstep, mass, phase)
+        function [xstar,u] = controlMPC(traj0, x0, Q, R, n_horizon, tstep, mass, phase)
             %{
                 Parameters:
                 -----------
@@ -239,7 +286,7 @@ classdef ChaserMPC
                     Blackbox controller for MPC (all the opt functions
                     above).
             %}
-            [xs,us] = ChaserMPC.optimizeLinear(traj0,Q,R,n_horizon,tstep,mass,phase);
+            [xs,us,xstar] = ChaserMPC.optimizeLinear(traj0, x0, Q,R,n_horizon,tstep,mass,phase);
             u = us(1:3,1); %return first control input
         end
     end

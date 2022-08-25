@@ -30,7 +30,7 @@ classdef ARPOD_Benchmark
                     sin(theta2/2), 0, -cos(theta2/2)];
             xyz = [traj(1);traj(2);traj(3)];
             b = LOS_mtx*xyz;
-            if b(1) <= 0 && b(2) <= 0 && b(3) <= 0 && b(4) <= 0
+            if b(1) <= 1e-5 && b(2) <= 1e-5 && b(3) <= 1e-5 && b(4) <= 1e-5
                 inLOS = 1;
             else
                 inLOS = 0;
@@ -58,12 +58,16 @@ classdef ARPOD_Benchmark
                 if (norm > ARPOD_Benchmark.rho_r)
                     % ARPOD phase 1: Rendezvous w/out range
                     phase = 1;
-                elseif ( (norm > ARPOD_Benchmark.rho_d) || (ARPOD_Benchmark.isInsideLOS(traj) == 0) ) 
+                elseif norm > ARPOD_Benchmark.rho_d
                     % ARPOD phase 2: Rendezvous with range
                     phase = 2;
                 else 
                     %ARPOD phase 3: Docking
-                    phase = 3;
+                    if (ARPOD_Benchmark.isInsideLOS(traj) == 0)
+                        phase = 2;
+                    else
+                        phase = 3;
+                    end
                 end
             else
                 % ARPOD phase 4: Rendezvous to new location

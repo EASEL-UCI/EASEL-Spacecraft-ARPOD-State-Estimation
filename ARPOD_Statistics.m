@@ -50,14 +50,21 @@ classdef ARPOD_Statistics
                     - Phase 3 boundary
             %}
 
+            set(groot,'defaultAxesTickLabelInterpreter','latex');  
+            set(groot,'defaulttextinterpreter','latex');
+            set(groot,'defaultLegendInterpreter','latex');
+            
+            fsize = 20; % figure fontsize
+            lw = 2; % linewidth
+            
             figure(1)
             %draw phase 2 sphere boundary
             [x,y,z] = sphere(10);
             r = ARPOD_Benchmark.rho_r;
             scatter3(r*x(:),r*y(:),r*z(:), 5,'o', 'filled', 'MarkerEdgeColor', 'c');
-
             axis equal
             hold on
+            
             %draw phase 3 sphere boundary
             [x,y,z] = sphere(5);
             r = ARPOD_Benchmark.rho_d;
@@ -65,16 +72,31 @@ classdef ARPOD_Statistics
 
             c = ARPOD_Benchmark.rho_d;
             %drawing pillars of pyramid
-            plot3([0,-sin(theta2/2)*c], [0,-sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
-            plot3([0,-sin(theta2/2)*c], [0,sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
-            plot3([0,sin(theta2/2)*c], [0,-sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
-            plot3([0,sin(theta2/2)*c], [0,sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
-            %drawing base of pyramid
-            plot3([-sin(theta2/2)*c, sin(theta2/2)*c], [-sin(theta1/2)*c,-sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
-            plot3([-sin(theta2/2)*c, sin(theta2/2)*c], [sin(theta1/2)*c, sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
-            plot3([-sin(theta2/2)*c, -sin(theta2/2)*c], [-sin(theta1/2)*c,sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
-            plot3([sin(theta2/2)*c, sin(theta2/2)*c], [-sin(theta1/2)*c, sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
+            %plot3([0,-sin(theta2/2)*c], [0,-sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
+            plot3([0,-cos(theta1/2)*c], [0,-sin(theta2/2)*c], [0,-sin(theta1/2)*c], 'g');
 
+            %plot3([0,-sin(theta2/2)*c], [0,sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
+            plot3([0,-cos(theta1/2)*c], [0,sin(theta1/2)*c], [0,-sin(theta2/2)*c], 'g');
+
+            %plot3([0,sin(theta2/2)*c], [0,-sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
+            plot3([0,-cos(theta1/2)*c], [0,-sin(theta1/2)*c],[0,sin(theta2/2)*c],  'g');
+
+            %plot3([0,sin(theta2/2)*c], [0,sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
+            plot3([0,-cos(theta1/2)*c], [0,sin(theta1/2)*c], [0,sin(theta2/2)*c],  'g');
+
+            %drawing base of pyramid
+            %plot3([-sin(theta2/2)*c, sin(theta2/2)*c], [-sin(theta1/2)*c,-sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
+            plot3([-cos(theta1/2)*c,-cos(theta1/2)*c], [-sin(theta1/2)*c,-sin(theta1/2)*c],[-sin(theta2/2)*c, sin(theta2/2)*c], 'g');
+
+            %plot3([-sin(theta2/2)*c, sin(theta2/2)*c], [sin(theta1/2)*c, sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
+            plot3([-cos(theta1/2)*c,-cos(theta1/2)*c],[sin(theta1/2)*c, sin(theta1/2)*c], [-sin(theta2/2)*c, sin(theta2/2)*c],'g');
+
+            %plot3([-sin(theta2/2)*c, -sin(theta2/2)*c], [-sin(theta1/2)*c,sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
+            plot3([-cos(theta1/2)*c,-cos(theta1/2)*c], [-sin(theta1/2)*c,sin(theta1/2)*c], [-sin(theta2/2)*c, -sin(theta2/2)*c], 'g');
+
+            %plot3([sin(theta2/2)*c, sin(theta2/2)*c], [-sin(theta1/2)*c, sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
+            plot3([-cos(theta1/2)*c,-cos(theta1/2)*c],[-sin(theta1/2)*c, sin(theta1/2)*c], [sin(theta2/2)*c, sin(theta2/2)*c], 'g');
+            
             %draw truechaserTraj
             plot3(obj.trackTraj(1,:), obj.trackTraj(2,:), obj.trackTraj(3,:), 'r');
             %draw estchaserTraj
@@ -84,31 +106,94 @@ classdef ARPOD_Statistics
             %draw chaserStart
             %draw chaserEnd
             %draw 
-            title("Chaser Trajectory");
-            xlabel("x");
-            ylabel("y");
-            zlabel("z");
+            title("Chaser Trajectory")
+            xlabel("x [km]")
+            ylabel("y [km]")
+            zlabel("z [km]")
+            set(gca,'fontsize',fsize)
+            set(gcf,'Position', [10 10 500 500])
+            set(gca, 'TickLabelInterpreter', 'latex')
             hold off
 
             figure(2)
-            plot(obj.timestamps, obj.trackFuelConsumption, 'b');
-            title("Time vs. Total Fuel Consumed");
-            xlabel("time (in seconds)");
-            ylabel("Fuel in kg*m/s");
+            set(gcf,'Position', [10 10 800 800])
+            subplot(4,1,1)
+            plot(obj.timestamps, obj.trackFuelConsumption, 'b','LineWidth',lw)
+%             title("Time vs. Total Fuel Consumed")
+            xlabel("Time [s]")
+            ylabel("Fuel [kg m/s]") 
+            set(gca,'fontsize',fsize)
+            set(gca, 'TickLabelInterpreter', 'latex')
+            grid
+            subplot(4,1,2)
+%             sq_error = sum((obj.trackTraj - obj.trackEstTraj).^2);
+            mean_squared_error = (1/length(obj.trackTraj))*sum((obj.trackTraj - obj.trackEstTraj).^2);
+%             plot(obj.timestamps, sq_error, 'r')
+            plot(obj.timestamps, mean_squared_error, 'r','LineWidth',lw)
+%             title("Squared Error of Trajectory Over Time")
+            xlabel("Time [s]")
+            ylabel("MSE of $\bf{x}$") % mean squared error of entire state estimate vector
+            set(gca,'fontsize',fsize)
+            set(gca, 'TickLabelInterpreter', 'latex')
+            grid
+            subplot(4,1,3)
+%             sq_error = sum((obj.trackTraj - obj.trackEstTraj).^2);
+            mean_squared_error_pos = (1/length(obj.trackTraj(1:3,:)))*sum((obj.trackTraj(1:3,:) - obj.trackEstTraj(1:3,:)).^2);
+%             plot(obj.timestamps, sq_error, 'r')
+            plot(obj.timestamps, mean_squared_error_pos, 'r','LineWidth',lw)
+%             title("Squared Error of Trajectory Over Time")
+            xlabel("Time [s]")
+            ylabel("MSE of pos") % mean squared error of entire state estimate vector
+            set(gca,'fontsize',fsize)
+            set(gca, 'TickLabelInterpreter', 'latex')
+            grid
+            subplot(4,1,4)
+%             sq_error = sum((obj.trackTraj - obj.trackEstTraj).^2);
+            mean_squared_error_vel = (1/length(obj.trackTraj(4:6,:)))*sum((obj.trackTraj(4:6,:) - obj.trackEstTraj(4:6,:)).^2);
+%             plot(obj.timestamps, sq_error, 'r')
+            plot(obj.timestamps, mean_squared_error_vel, 'r','LineWidth',lw)
+%             title("Squared Error of Trajectory Over Time")
+            xlabel("Time [s]")
+            ylabel("MSE of vel") % mean squared error of entire state estimate vector
+            set(gca,'fontsize',fsize)
+            set(gca, 'TickLabelInterpreter', 'latex')
+            grid
 
-            figure(3)
-            sq_error = sum((obj.trackTraj - obj.trackEstTraj).^2);
-            plot(obj.timestamps, sq_error, 'r');
-            title("Squared Error of Trajectory Over Time")
-            xlabel("time (in seconds)")
-            ylabel("Squared Error");
-
-            figure(4)
-            plot(obj.trackTraj(1,:), obj.trackTraj(2,:), 'r');
-            plot(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), 'b');
-            title('Chaser Trajectory 2D')
-            xlabel("x");
-            ylabel("y");
+            figure(3) % true trajectories and estimates in 2D planes
+            set(gcf,'Position', [10 10 800 800])
+            subplot(3,1,1) % x-y
+            plot(obj.trackTraj(1,:), obj.trackTraj(2,:), 'r','LineWidth',lw)
+            hold on
+            plot(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), 'b--','LineWidth',lw)
+%             title('Chaser Trajectory 2D')
+            xlabel("$x$ [km]")
+            ylabel("$y$ [km]")
+            set(gca,'fontsize',fsize)
+            legend('true','estimate','Location','southeast')
+            set(gca, 'TickLabelInterpreter', 'latex')
+            grid
+            subplot(3,1,2) % x-z
+            plot(obj.trackTraj(1,:), obj.trackTraj(3,:), 'r','LineWidth',lw)
+            hold on
+            plot(obj.trackEstTraj(1,:), obj.trackEstTraj(3,:), 'b--','LineWidth',lw)
+%             title('Chaser Trajectory 2D')
+            xlabel("$x$ [km]")
+            ylabel("$z$ [km]")
+            legend('true','estimate')
+            set(gca,'fontsize',fsize)
+            set(gca, 'TickLabelInterpreter', 'latex')
+            grid
+            subplot(3,1,3) % y-z
+            plot(obj.trackTraj(2,:), obj.trackTraj(3,:), 'r','LineWidth',lw)
+            hold on
+            plot(obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b--','LineWidth',lw)
+%             title('Chaser Trajectory 2D')
+            xlabel("$y$ [km]")
+            ylabel("$z$ [km]")
+            legend('true','estimate')
+            set(gca,'fontsize',fsize)
+            set(gca, 'TickLabelInterpreter', 'latex')
+            grid
 
             return;
         end
