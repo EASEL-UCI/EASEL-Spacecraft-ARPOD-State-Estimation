@@ -230,7 +230,7 @@ classdef ChaserMPC
             
             if phase == 2
                 %f = ChaserMPC.setupLOSRelaxation(1e10,n_horizon);
-                traj0 = traj0 + [3*ARPOD_Benchmark.rho_d/4;0;0;0;0;0];
+                traj0 = traj0 + [5*ARPOD_Benchmark.rho_d/6;0;0;0;0;0];
             end
             
 

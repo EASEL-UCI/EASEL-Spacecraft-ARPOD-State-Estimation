@@ -10,6 +10,8 @@ classdef ARPOD_Statistics
         trackPhase = [];
         timestamps = [];
         total_steps = 0;
+
+        estimation_ts = [0];
     end
     methods
         function obj = initBenchmark(obj, traj0)
@@ -21,7 +23,7 @@ classdef ARPOD_Statistics
             obj.trackEstTraj = [obj.trackEstTraj, traj0];
             obj.total_steps = 1;
         end
-        function obj = updateBenchmark(obj, u, mass, trueTraj, estTraj, tstep, phase)
+        function obj = updateBenchmark(obj, u, mass, trueTraj, estTraj, tstep, estimation_time, phase)
             obj.trackU = [obj.trackU, u];
 
             fuel = obj.trackFuelConsumption(length(obj.trackFuelConsumption));
@@ -35,6 +37,8 @@ classdef ARPOD_Statistics
             obj.trackTraj = [obj.trackTraj, obj.currTraj];
             obj.total_steps = obj.total_steps + 1;
             obj.timestamps = [obj.timestamps, obj.timestamps(length(obj.timestamps)) + tstep];
+
+            obj.estimation_ts = [obj.estimation_ts, estimation_time];
         end
         function obj = graphLinear(obj, theta1, theta2)
             %{
@@ -194,6 +198,12 @@ classdef ARPOD_Statistics
             set(gca,'fontsize',fsize)
             set(gca, 'TickLabelInterpreter', 'latex')
             grid
+
+            figure(4)
+            title("State Estimator Time")
+            xlabel("Time (seconds)")
+            ylabel("State Estimation Time (seconds)")
+            plot(obj.timestamps, obj.estimation_ts, 'b');
 
             return;
         end
