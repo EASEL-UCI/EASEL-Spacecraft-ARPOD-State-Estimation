@@ -20,6 +20,8 @@
                 
                 
 %}
+clear
+clc
 rng(1);
 
 
@@ -28,12 +30,12 @@ rng(1);
 %traj = [-6;-6;6;0.01;0.0001;0.0001];
 traj = [-5;5;5;-0.01;0.001;0.001];
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 500;
+total_time = 1000;
 tstep = 5; % update every second
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
 %MPC parameters
-mpc_horizon = 20;
+mpc_horizon = 10;
 scale_mpcQ = 1;
 scale_mpcR = 100;
 mpc_Q = scale_mpcQ*[1,0,0,0,0,0;
@@ -62,7 +64,7 @@ end
         2: Particle Filter
         3: Moving Horizon Estimator
 %}
-stateEstimatorOption = 4;
+stateEstimatorOption = 2;
 
 %Setting up State Estimator Q and R matrices
 %{
@@ -74,7 +76,7 @@ stateEstimatorOption = 4;
 
 %}
 
-process_noise = 0;
+process_noise = 1e-7;
 if (stateEstimatorOption == 1)
     %EKF
     stateEstimator = ChaserEKF;
@@ -83,10 +85,11 @@ if (stateEstimatorOption == 1)
     % tunable parameters
     if process_noise == 0
         seQ = 1e-20*diag([1,1,1,1,1,1]);
+        seR = diag([0.001,0.001,0.01]);
     else
         seQ = diag(zeros(1,6)+process_noise);
+        seR = process_noise.^(-1/3)*diag([0.001,0.001,0.01]);
     end
-    seR = diag([0.001,0.001,0.01]);
 elseif (stateEstimatorOption == 2)
     %PF
     ess_threshold = 700;
@@ -97,7 +100,7 @@ elseif (stateEstimatorOption == 2)
 
     % tunable estimators
     seQ = diag(zeros(1,6)+process_noise);
-    seR = 1e5*diag([0.001,0.001,0.01]);
+    seR = process_noise.^(-1)*1e5*diag([0.001,0.001,0.01]);
 elseif stateEstimatorOption == 3
     %moving horizon estimator
     stateEstimator = ChaserMHE;
@@ -113,24 +116,42 @@ elseif stateEstimatorOption == 3
     if process_noise == 0
         seQ = 1e20*diag([1,1,1,1,1,1]); %arbitrarily large
     else
-        seQ = process_noise.^(-1)*diag([1,1,1,1,1,1]); %arbitrarily large
+        seQ = process_noise.^(-1)*1e3*diag([1,1,1,1,1,1]); %arbitrarily large
     end
     seR = diag([1e3, 1e3, 1e2]);
+
 elseif stateEstimatorOption == 4 %MHE unconstr
     stateEstimator = ChaserMHE_Unconstr;
     mhe_horizon = 10;
 
-    
+
     if process_noise == 0
         seQ = 1e20*diag([1,1,1,1,1,1]); %arbitrarily large
     else
         seQ = process_noise.^(-1)*diag([1,1,1,1,1,1]); %arbitrarily large
     end
+    seR = diag([1e3, 1e3, 1e2]);
+
     sense = ARPOD_Benchmark.sensor(traj, @() [0;0;0], phase);
     stateEstimator = stateEstimator.init(traj, sense, mhe_horizon, tstep);
 
-elseif stateEstimatorOption == 5 %MHE EKF
-elseif stateEstimatorOption == 6 %MHE EKF unconstr
+else %MHE EKF
+    stateEstimator = ChaserMHE_EKF;
+    mhe_horizon = 10;
+    forget_factor = 1;
+
+    if process_noise == 0
+        seQ = 1e20*diag([1,1,1,1,1,1]); %arbitrarily large
+        ekfQ = 1e-20*diag([1,1,1,1,1,1]);
+        ekfR = diag([0.001,0.001,0.01]);
+    else
+        seQ = process_noise.^(-1/3)*diag([1,1,1,1,1,1]); %arbitrarily large
+        ekfQ = diag(zeros(1,6)+process_noise);
+        ekfR = process_noise.^(-1/3)*diag([0.001,0.001,0.01]);
+    end
+    seR = 1e3*diag([1,1,1,1,1,1]);
+
+    stateEstimator = stateEstimator.init(traj, mhe_horizon, forget_factor, tstep, ekfQ, ekfR);
 end
 
 %initialize statistics for graph

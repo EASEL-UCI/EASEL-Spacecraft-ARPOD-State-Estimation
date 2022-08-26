@@ -27,38 +27,6 @@ classdef ChaserMPC
             f = zeros(ndim,1);
             H = sparse(diag(H));
         end
-        function f = setupLOSRelaxation(LOS_scale, n_horizon)
-
-            %{
-            theta1 = ARPOD_Benchmark.theta * pi / 180;
-            theta2 = theta1;
-            LOS = [ sin(theta1/2), cos(theta1/2), 0; 
-                    sin(theta1/2), -cos(theta1/2), 0;
-                    sin(theta2/2), 0, cos(theta2/2);
-                    sin(theta2/2), 0, -cos(theta2/2)];
-            LOS_mtx = [LOS, zeros(4,3)];
-
-            sumCols = LOS_mtx(1,:) + LOS_mtx(2,:) + LOS_mtx(3,:) + LOS_mtx(4,:);
-            f = [];
-            for i = 1:n_horizon
-                if i ~= n_horizon
-                    f = [f;sumCols.'; [0;0;0]];
-                else
-                    f = [f;sumCols.'];
-                end
-            end
-            f = LOS_scale * f;
-            %}
-            f = [];
-            for i = 1:n_horizon
-                if i ~= n_horizon
-                    f = [f;[-1;0;0;0;0;0]; [0;0;0]];
-                else
-                    f = [f;[-1;0;0;0;0;0]];
-                end
-            end
-            f = -LOS_scale * f;
-        end
         function [Aeq, beq] = setupLinearConstraints(traj0, tstep, n_horizon)
             %{
                 Parameters:
@@ -245,9 +213,7 @@ classdef ChaserMPC
             vbar = ARPOD_Benchmark.Vbar;
             A = [];
             b = [];
-            if phase == 2
-                A = ChaserMPC.setupLinearLOS(n_horizon,n_horizon);
-            elseif phase == 3
+            if phase == 3
                 for i = 1:n_horizon
                     LOS = ChaserMPC.setupLinearLOS(i,n_horizon);
                     A = [A; LOS];

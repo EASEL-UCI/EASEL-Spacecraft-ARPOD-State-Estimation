@@ -156,20 +156,6 @@ classdef ChaserMHE
                 obj.window_control = [obj.window_control(:,2:n), control];
             end
         end
-
-
-        function [Aeq, beq] = DynamicConstraintMatrices(obj, vector, horizon, tstep)
-            %{
-                Ax + Bu = x_k+1
-                Ax - Ix_k+1 = -B*u
-                [A ... -I]x = -B*u
-            %}
-            beq = [];
-            [A,B] = ARPOD_Benchmark.linearDynamics(tstep);
-            for i = 1:horizon-1
-                beq = [beq; -B*obj.window_control(:,i)];
-            end
-        end
         function ceq = setupDynamicConstraints(obj, vector, horizon, tstep)
             ceq = [];
             ceq = vector(1:6,:) - obj.window_states(:,1); % set x0 - xbar0 = 0;
