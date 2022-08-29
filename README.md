@@ -1,4 +1,4 @@
-# UCI EASEL LAB State Estimation Work
+# UCI EASEL State Estimation Work
 Currently exploring and benchmarking common state estimators for the spacecraft rendezvous/docking problem.
 
 ## Problem Formulation
