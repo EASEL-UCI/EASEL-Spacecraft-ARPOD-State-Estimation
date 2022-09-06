@@ -213,9 +213,7 @@ classdef ChaserMHE_EKF
             lb = ones(length(x0),1) - Inf;
             ub = ones(length(x0),1) + Inf;
 
-            disp(size(Aeq1))
-            disp(size(Aeq2))
-            disp(size(H))
+            
             %options = optimoptions(@quadprog, 'Algorithm', 'trust-region-reflective');
             xstar = quadprog(H,f,[],[],Aeq,beq,lb,ub,x0);
 

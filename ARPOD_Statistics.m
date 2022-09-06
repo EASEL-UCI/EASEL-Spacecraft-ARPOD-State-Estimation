@@ -200,11 +200,9 @@ classdef ARPOD_Statistics
             grid
 
             figure(4)
-            title("State Estimator Time")
+            plot(obj.timestamps, obj.estimation_ts, 'b');
             xlabel("Time (seconds)")
             ylabel("State Estimation Time (seconds)")
-            plot(obj.timestamps, obj.estimation_ts, 'b');
-
             return;
         end
         function totalMSE = getError(obj)
