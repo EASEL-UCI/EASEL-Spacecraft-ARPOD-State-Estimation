@@ -89,13 +89,13 @@ classdef ChaserMHE_Unconstr
 
             x0 = obj.windowsToVector(horizon);
 
-            xstar = fminunc(objective, x0);
+            options = optimoptions(@fminunc, 'Display', 'off');
+            xstar = fminunc(objective, x0, options);
             %
             [dim, horizon] = size(xstar);
             if horizon == 0
                 error("Optimization went wrong!!");
             end
-            disp(objective(xstar))
             obj = obj.vectorToWindows(xstar, horizon);
         end
         function obj = estimate(obj, control, measurement, Q_cov, R_cov,tstep, phase) %ducktyping for all state estimators

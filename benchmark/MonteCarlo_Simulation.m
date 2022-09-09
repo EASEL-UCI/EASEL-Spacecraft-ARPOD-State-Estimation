@@ -15,7 +15,7 @@ phase2Error = [];
 phase3Error = [];
 error = [];
 
-estimatorOption = 3;
+estimatorOption = 4;
 
 for i = 1:monteCarlo_Length
     disp("Monte Carlo Iteration: " + i)
@@ -59,7 +59,7 @@ for i = 1:monteCarlo_Length
         vz = unifrnd(-1e-7,1e-7);
     end
     disp("Initial  Trajectory: [" + x + "," + y + "," + z + "," + vx + "," + vy + "," + vz + "]")
-    stats = Benchmark([x;y;z;vx;vy;vz],estimatorOption,0*[1,1,1,1e-20,1e-20,1e-20],0,0);
+    stats = Benchmark([x;y;z;vx;vy;vz],estimatorOption,1e-5*[1,1,1,1e-20,1e-20,1e-20],0,0);
 
     idxPhase1 = find(stats.trackPhase==1);
     idxPhase2 = find(stats.trackPhase==2);
