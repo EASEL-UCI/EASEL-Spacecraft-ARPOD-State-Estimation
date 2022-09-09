@@ -18,7 +18,7 @@ classdef ARPOD_Statistics
             obj.currTraj = traj0;
             obj.trackFuelConsumption = [0];
             obj.timestamps = [0];
-            obj.trackPhase = [1]; %mission always starts on phase 1
+            obj.trackPhase = [ARPOD_Benchmark.calculatePhase(traj0,0)]; %mission always starts on phase 1
             obj.trackTraj = [obj.trackTraj, traj0];
             obj.trackEstTraj = [obj.trackEstTraj, traj0];
             obj.total_steps = 1;

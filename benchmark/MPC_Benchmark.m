@@ -31,10 +31,13 @@ rng(1);
 %initial parameters
 %traj = [-1;-0;0;0.01;0.01;0.001];
 %traj = [-6;-6;6;0.01;0.0001;0.0001];
-traj = [-5;5;5;-0.01;0.001;0.001];
+%traj = [-10;10;10;-0.01;0.001;0.001];
+traj = [0.37859,-3.288,2.4861,0.00024719,-0.00091536,0.00092736].';
+
+
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 1000;
-tstep = 1; % update every second
+total_time = 1500;
+tstep = 1; % update every 0.33 seconds
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
 %MPC parameters
@@ -67,7 +70,7 @@ end
         2: Particle Filter
         3: Moving Horizon Estimator
 %}
-stateEstimatorOption = 2;
+stateEstimatorOption = 1;
 
 %Setting up State Estimator Q and R matrices
 %{
@@ -81,19 +84,19 @@ stateEstimatorOption = 2;
 %}
 
 %1e-5
-process_noise = 0*[1,1,1,1e-20,1e-20,1e-20];
+process_noise = 1e-10*[1,1,1,1e-5,1e-5,1e-5];
 if (stateEstimatorOption == 1)
     %EKF
     stateEstimator = ChaserEKF;
-    stateEstimator = stateEstimator.initEKF(traj, 1e-10*eye(6)); %really trust initial estimate.
+    stateEstimator = stateEstimator.initEKF(traj, 1e-50*eye(6)); %really trust initial estimate.
 
-    % tunable parameters
-    if process_noise == 0
+% tunable parameters
+    if sum(process_noise) == 0
         seQ = 1e-20*diag([1,1,1,1,1,1]);
-        seR = diag([0.001,0.001,0.01]);
+        seR = diag([0.001,0.001,0.001]);
     else
         seQ = diag(zeros(1,6)+process_noise);
-        seR = diag([0.001,0.001,0.01]);
+        seR = diag([0.001,0.001,0.001]);
     end
 elseif (stateEstimatorOption == 2)
     %PF
@@ -190,7 +193,7 @@ for i = tstep:tstep:total_time
     %benchmark doesn't consider process noise :{
     %only considers sensor noise and varies it depending on phase
     process_noise_noise = 0.000;
-    noise_noise = 3;
+    noise_noise = 0;
     if phase == 1
         noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0] + process_noise).';
         %noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0]).';
@@ -247,5 +250,4 @@ end
 %graph results
 theta = 60;
 stats.graphLinear(theta * pi / 180,theta * pi / 180);
-
 
