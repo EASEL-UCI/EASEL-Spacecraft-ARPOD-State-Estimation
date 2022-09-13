@@ -15,7 +15,11 @@ phase2Error = [];
 phase3Error = [];
 error = [];
 
-estimatorOption = 4;
+
+fuelConsumption = [];
+mission_times = [];
+
+estimatorOption = 2;
 
 for i = 1:monteCarlo_Length
     disp("Monte Carlo Iteration: " + i)
@@ -77,6 +81,9 @@ for i = 1:monteCarlo_Length
     phase3Time = [phase3Time, Time(idxPhase3)];
     times = [times, stats.estimation_ts];
     total_steps = total_steps + stats.total_steps;
+
+    mission_times = [mission_times, stats.timestamps(end)];
+    fuelConsumption = [fuelConsumption, stats.trackFuelConsumption(end)];
 end
 disp("Error Stats")
 errorMean = mean(error);
@@ -158,3 +165,25 @@ disp("      timeMean:" + timeMean)
 disp("      timeMax:" + timeMax)
 disp("      timeMin:" + timeMin)
 disp("      timeStd:" + timeStd)
+
+disp("Fuel Stats")
+fuelMean = mean(fuelConsumption);
+fuelMax = max(fuelConsumption);
+fuelMin = min(fuelConsumption);
+fuelStd = std(fuelConsumption);
+disp("      fuelMean:" + fuelMean)
+disp("      fuelMax:" + fuelMax)
+disp("      fuelMin:" + fuelMin)
+disp("      fuelStd:" + fuelStd)
+
+disp("Mission Time Stats")
+missionMean= mean(mission_times);
+missionMax = max(mission_times);
+missionMin = min(mission_times);
+missionStd = std(mission_times);
+disp("      missionMean:" + missionMean)
+disp("      missionMax:" + missionMax)
+disp("      missionMin:" + missionMin)
+disp("      missionStd:" + missionStd)
+
+save('PF_1');

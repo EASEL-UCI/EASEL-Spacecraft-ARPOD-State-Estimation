@@ -32,7 +32,7 @@ rng(1);
 %traj = [-1;-0;0;0.01;0.01;0.001];
 %traj = [-6;-6;6;0.01;0.0001;0.0001];
 %traj = [-10;10;10;-0.01;0.001;0.001];
-traj = [0.37859,-3.288,2.4861,0.00024719,-0.00091536,0.00092736].';
+traj = [-4.2254,4.2022,-3.691,0.00052847,-0.000776,0.00042925].';
 
 
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
@@ -84,7 +84,7 @@ stateEstimatorOption = 1;
 %}
 
 %1e-5
-process_noise = 1e-10*[1,1,1,1e-5,1e-5,1e-5];
+process_noise = 0*[1,1,1,1e-20,1e-20,1e-20];
 if (stateEstimatorOption == 1)
     %EKF
     stateEstimator = ChaserEKF;
@@ -204,7 +204,7 @@ for i = tstep:tstep:total_time
     else
         noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0] + (process_noise + process_noise_noise)*0.01).';
         noiseR = @() mvnrnd([0;0;0], [0.001, 0.001, 1e-5] + noise_noise).';
-    end
+    end 
 
 
     if mpc_choice == 1 %linear
