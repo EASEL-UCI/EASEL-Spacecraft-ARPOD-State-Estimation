@@ -231,9 +231,9 @@ classdef ChaserMPC
             end
 
             if phase == 3
-                options = optimoptions(@quadprog, 'Algorithm', 'active-set');
+                options = optimoptions(@quadprog, 'Algorithm', 'active-set', 'Display', 'off');
             else
-                options = optimoptions(@quadprog, 'Algorithm', 'interior-point-convex');
+                options = optimoptions(@quadprog, 'Algorithm', 'interior-point-convex', 'Display', 'off');
             end
             final = quadprog(H,f,A,b,Aeq,beq,lb,ub,x0,options);
             %final = quadprog(H,f,A,b,Aeq,beq,lb,ub);

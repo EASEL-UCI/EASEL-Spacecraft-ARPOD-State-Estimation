@@ -11,15 +11,18 @@
 
 
         Tests: different phases
-                try init MHE w/ EKF
-                think of different noise profiles for sensors
+                init MHE    
+                write a script to comapre all estimators in a side-by-side
+                monte carlo trajectories 
+                write stuff into a file
+                plot the stuff in file for side-by-side comparison
+                use file names + values for automated mc
 
-                add process noise 5% (std: 0.05)
 
-                use NERM equations w/ elliptical orbit
-                
-                
+                packet dropouts
+                packet delay
 %}
+close all
 clear
 clc
 rng(1);
@@ -28,10 +31,13 @@ rng(1);
 %initial parameters
 %traj = [-1;-0;0;0.01;0.01;0.001];
 %traj = [-6;-6;6;0.01;0.0001;0.0001];
-traj = [-5;5;5;-0.01;0.001;0.001];
+%traj = [-10;10;10;-0.01;0.001;0.001];
+traj = [-4.2254,4.2022,-3.691,0.00052847,-0.000776,0.00042925].';
+
+
 %total_time = ARPOD_Benchmark.t_e; %equate the benchmark duration to eclipse time
-total_time = 1000;
-tstep = 5; % update every second
+total_time = 1500;
+tstep = 1; % update every 0.33 seconds
 phase = ARPOD_Benchmark.calculatePhase(traj,0);
 
 %MPC parameters
@@ -64,10 +70,11 @@ end
         2: Particle Filter
         3: Moving Horizon Estimator
 %}
-stateEstimatorOption = 2;
+stateEstimatorOption = 1;
 
 %Setting up State Estimator Q and R matrices
 %{
+
 
     For EKF, Q is the process covariance and R is sensor covariance.
     For PF, it's the same as EKF
@@ -76,19 +83,20 @@ stateEstimatorOption = 2;
 
 %}
 
-process_noise = 1e-7;
+%1e-5
+process_noise = 0*[1,1,1,1e-20,1e-20,1e-20];
 if (stateEstimatorOption == 1)
     %EKF
     stateEstimator = ChaserEKF;
-    stateEstimator = stateEstimator.initEKF(traj, 1e-10*eye(6)); %really trust initial estimate.
+    stateEstimator = stateEstimator.initEKF(traj, 1e-50*eye(6)); %really trust initial estimate.
 
-    % tunable parameters
-    if process_noise == 0
+% tunable parameters
+    if sum(process_noise) == 0
         seQ = 1e-20*diag([1,1,1,1,1,1]);
-        seR = diag([0.001,0.001,0.01]);
+        seR = diag([0.001,0.001,0.001]);
     else
         seQ = diag(zeros(1,6)+process_noise);
-        seR = process_noise.^(-1/3)*diag([0.001,0.001,0.01]);
+        seR = diag([0.001,0.001,0.001]);
     end
 elseif (stateEstimatorOption == 2)
     %PF
@@ -100,7 +108,7 @@ elseif (stateEstimatorOption == 2)
 
     % tunable estimators
     seQ = diag(zeros(1,6)+process_noise);
-    seR = process_noise.^(-1)*1e5*diag([0.001,0.001,0.01]);
+    seR = 1e5*diag([0.001,0.001,0.01]);
 elseif stateEstimatorOption == 3
     %moving horizon estimator
     stateEstimator = ChaserMHE;
@@ -116,7 +124,7 @@ elseif stateEstimatorOption == 3
     if process_noise == 0
         seQ = 1e20*diag([1,1,1,1,1,1]); %arbitrarily large
     else
-        seQ = process_noise.^(-1)*1e3*diag([1,1,1,1,1,1]); %arbitrarily large
+        seQ = max(process_noise(:)).^(-1)*1e3*diag([1,1,1,1,1,1]); %arbitrarily large
     end
     seR = diag([1e3, 1e3, 1e2]);
 
@@ -128,7 +136,7 @@ elseif stateEstimatorOption == 4 %MHE unconstr
     if process_noise == 0
         seQ = 1e20*diag([1,1,1,1,1,1]); %arbitrarily large
     else
-        seQ = process_noise.^(-1)*diag([1,1,1,1,1,1]); %arbitrarily large
+        seQ = max(process_noise(:)).^(-1)*diag([1,1,1,1,1,1]); %arbitrarily large
     end
     seR = diag([1e3, 1e3, 1e2]);
 
@@ -145,13 +153,28 @@ else %MHE EKF
         ekfQ = 1e-20*diag([1,1,1,1,1,1]);
         ekfR = diag([0.001,0.001,0.01]);
     else
-        seQ = process_noise.^(-1/3)*diag([1,1,1,1,1,1]); %arbitrarily large
+        seQ = max(process_noise(:)).^(-1)*diag([1,1,1,1,1,1]); %arbitrarily large
         ekfQ = diag(zeros(1,6)+process_noise);
-        ekfR = process_noise.^(-1/3)*diag([0.001,0.001,0.01]);
+        ekfR = diag([0.001,0.001,0.01]);
     end
     seR = 1e3*diag([1,1,1,1,1,1]);
 
     stateEstimator = stateEstimator.init(traj, mhe_horizon, forget_factor, tstep, ekfQ, ekfR);
+end
+
+%initialize EKF for MHJE
+if stateEstimatorOption >= 3 && stateEstimatorOption < 5
+    ekf = ChaserEKF;
+    ekf = ekf.initEKF(traj, 1e-10*eye(6)); %really trust initial estimate.
+
+    % tunable parameters
+    if process_noise == 0
+        ekfQ = 1e-20*diag([1,1,1,1,1,1]);
+        ekfR = diag([0.001,0.001,0.01]);
+    else
+        ekfQ = diag(zeros(1,6)+process_noise);
+        ekfR = diag([0.001,0.001,0.01]);
+    end
 end
 
 %initialize statistics for graph
@@ -170,9 +193,10 @@ for i = tstep:tstep:total_time
     %benchmark doesn't consider process noise :{
     %only considers sensor noise and varies it depending on phase
     process_noise_noise = 0.000;
-    noise_noise = 10;
+    noise_noise = 0;
     if phase == 1
         noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0] + process_noise).';
+        %noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0]).';
         noiseR = @() mvnrnd([0;0;0], [0.001, 0.001, 0.01] + noise_noise).';
     elseif phase == 2
         noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0] + (process_noise + process_noise_noise)*0.1).';
@@ -180,11 +204,10 @@ for i = tstep:tstep:total_time
     else
         noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0] + (process_noise + process_noise_noise)*0.01).';
         noiseR = @() mvnrnd([0;0;0], [0.001, 0.001, 1e-5] + noise_noise).';
-    end
+    end 
 
 
     if mpc_choice == 1 %linear
-
         if (i == tstep)
             x0 = -1;
             [x0,u] = ChaserMPC.controlMPC(estTraj,x0,mpc_Q,mpc_R,mpc_horizon,tstep,ARPOD_Benchmark.m_c,phase);
@@ -206,8 +229,14 @@ for i = tstep:tstep:total_time
 
     %given sensor reading read EKF
     tic
-    stateEstimator = stateEstimator.estimate(u, sense, seQ, seR, tstep, phase);
-    estTraj = stateEstimator.state;
+    if stateEstimatorOption >= 3 && stateEstimatorOption < 5 && i <= mhe_horizon*(tstep+1)
+        ekf = ekf.estimate(u,sense,ekfQ,ekfR,tstep,phase);
+        stateEstimator = stateEstimator.estimate(u, sense, seQ, seR, tstep, phase);
+        estTraj = ekf.state;
+    else
+        stateEstimator = stateEstimator.estimate(u, sense, seQ, seR, tstep, phase);
+        estTraj = stateEstimator.state;
+    end
     estTime = toc;
 
     stats = stats.updateBenchmark(u, ARPOD_Benchmark.m_c, traj, estTraj, tstep, estTime, phase);
@@ -221,5 +250,4 @@ end
 %graph results
 theta = 60;
 stats.graphLinear(theta * pi / 180,theta * pi / 180);
-
 

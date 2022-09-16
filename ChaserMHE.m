@@ -221,14 +221,13 @@ classdef ChaserMHE
             ub = ones(length(x0),1) + Inf;
 
             %options = optimoptions(@fmincon, 'Algorithm', 'interior-point', 'MaxIterations', 2000, 'ConstraintTolerance', 1e-12, "EnableFeasibilityMode",true, "HonorBounds", true);
-            options = optimoptions(@fmincon, 'Algorithm', 'sqp', 'MaxIterations', 2000, 'ConstraintTolerance', 1e-6);
+            options = optimoptions(@fmincon, 'Algorithm', 'sqp', 'MaxIterations', 2000, 'ConstraintTolerance', 1e-6, 'Display', 'off');
             xstar = fmincon(objective, x0, A, b, Aeq, beq, lb, ub, nonlcon, options);
             %
             [dim, horizon] = size(xstar);
             if horizon == 0
                 error("Optimization went wrong!!");
             end
-            disp(objective(xstar))
             obj = obj.vectorToWindows(xstar);
         end
 

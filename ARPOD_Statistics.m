@@ -18,7 +18,7 @@ classdef ARPOD_Statistics
             obj.currTraj = traj0;
             obj.trackFuelConsumption = [0];
             obj.timestamps = [0];
-            obj.trackPhase = [1]; %mission always starts on phase 1
+            obj.trackPhase = [ARPOD_Benchmark.calculatePhase(traj0,0)]; %mission always starts on phase 1
             obj.trackTraj = [obj.trackTraj, traj0];
             obj.trackEstTraj = [obj.trackEstTraj, traj0];
             obj.total_steps = 1;
@@ -106,6 +106,9 @@ classdef ARPOD_Statistics
             %draw estchaserTraj
             plot3(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b');
 
+
+            plot3(obj.trackEstTraj(1,end), obj.trackEstTraj(2,end), obj.trackEstTraj(3,end), 'bo', 'MarkerSize', 20);
+            plot3(obj.trackTraj(1,end), obj.trackTraj(2,end), obj.trackTraj(3,end), 'ro', 'MarkerSize', 20);
             %draw target position
             %draw chaserStart
             %draw chaserEnd
@@ -114,6 +117,9 @@ classdef ARPOD_Statistics
             xlabel("x [km]")
             ylabel("y [km]")
             zlabel("z [km]")
+            xlim([-10,10]);
+            ylim([-10,10]);
+            zlim([-10,10]);
             set(gca,'fontsize',fsize)
             set(gcf,'Position', [10 10 500 500])
             set(gca, 'TickLabelInterpreter', 'latex')
@@ -200,11 +206,9 @@ classdef ARPOD_Statistics
             grid
 
             figure(4)
-            title("State Estimator Time")
+            plot(obj.timestamps, obj.estimation_ts, 'b');
             xlabel("Time (seconds)")
             ylabel("State Estimation Time (seconds)")
-            plot(obj.timestamps, obj.estimation_ts, 'b');
-
             return;
         end
         function totalMSE = getError(obj)
