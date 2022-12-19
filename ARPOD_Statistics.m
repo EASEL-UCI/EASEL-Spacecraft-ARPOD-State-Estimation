@@ -68,7 +68,7 @@ classdef ARPOD_Statistics
             scatter3(r*x(:),r*y(:),r*z(:), 5,'o', 'filled', 'MarkerEdgeColor', 'c');
             axis equal
             hold on
-            
+
             %draw phase 3 sphere boundary
             [x,y,z] = sphere(5);
             r = ARPOD_Benchmark.rho_d;

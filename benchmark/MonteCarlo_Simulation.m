@@ -15,7 +15,7 @@ phase2Error = [];
 phase3Error = [];
 error = [];
 
-estimatorOption = 4;
+estimatorOption = 1;
 
 for i = 1:monteCarlo_Length
     disp("Monte Carlo Iteration: " + i)
