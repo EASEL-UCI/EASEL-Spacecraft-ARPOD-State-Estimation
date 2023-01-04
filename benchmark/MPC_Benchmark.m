@@ -205,7 +205,7 @@ for i = tstep:tstep:total_time
     else
         noiseQ = @() mvnrnd([0;0;0;0;0;0], [0,0,0,0,0,0] + (process_noise + process_noise_noise)*0.01).';
         noiseR = @() mvnrnd([0;0;0], [0.001, 0.001, 1e-5] + noise_noise).';
-    end
+    end 
 
 
     if mpc_choice == 1 %linear
