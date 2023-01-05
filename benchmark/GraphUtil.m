@@ -192,6 +192,32 @@ classdef GraphUtil
             GraphUtil.graphTarget();
             hold off
         end
+
+        function percentages = normalizeTrajectories(track_trajs)
+            num_steps = length(track_trajs);
+            distance = 0;
+            percentages = zeros(num_steps);
+            for idx = 2:num_steps
+                distance = distance + sqrt(sum((track_trajs(idx) - track_trajs(idx-1)).^2));
+                percentages(idx) = distance;
+            end
+            percentages = percentages / distance;
+        end
+        function void = graphTrajectorySpecial(arpod_stats)
+            first_graph = true;
+            sum_trajs = 0;
+            for idx = 1:length(arpod_stats)
+                track_trajs = arpod_stats{idx}.trackTraj;
+                %normalize trajectories (get x axis stuff)
+                percent_trajs = GraphUtil.normalizeTrajectories(track_trajs);
+
+                %get y axis stuff
+                arpod_stats{idx}.
+            end
+
+            %print x and y axis points as an error bar w/ stdev....
+            
+        end
         %%%%% END OF UTIL CODE %%%%%
     end
 end
