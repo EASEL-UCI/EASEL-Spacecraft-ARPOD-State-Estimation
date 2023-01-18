@@ -17,9 +17,6 @@
             - show (mean,stdev) along normalized paths
             - can show clean way?
         - plot what's in the tables as bar graphs
-
-        $ see if it looks nice
-        - EKF,PF, MHE Starting and Ending Points Distribution
         
         - see if I can make a GIF (presentation)
 
@@ -33,8 +30,6 @@
         - MHE. vs. PF
         - EKF. vs. PF
         - MHE vs. EKF
-
-    - REGISTER FOR CONFERENCE!!!
 %}
 
 classdef GraphUtil
@@ -94,14 +89,20 @@ classdef GraphUtil
             %}
             scatter3(x,y,z,color);
             if first_graph
-                axis equal
+                %axis equal
+                hold on
+            end
+        end
+        function void = graph2dPt(x,y,color,first_graph)
+            scatter(x,y,color);
+            if first_graph
                 hold on
             end
         end
         function void = graphTrajectory(x,y,z,color,first_graph)
             plot3(x,y,z,color);
             if first_graph
-                axis equal
+                %axis equal
                 hold on
             end
         end
@@ -110,7 +111,7 @@ classdef GraphUtil
             ts = linspace(0,t,t);
             plot(ts,x,'r');
             if first_graph
-                axis equal
+                %axis equal
                 hold on
             end
             plot(ts,y,'g');
@@ -154,6 +155,31 @@ classdef GraphUtil
             hold off
         end
 
+        function void = graphStartFinishDistribution(arpod_stats)
+            xs = zeros(length(arpod_stats));
+            ys = zeros(length(arpod_stats));
+            zs = zeros(length(arpod_stats));
+            for idx = 1:length(arpod_stats)
+                tracked_trajs = arpod_stats{idx}.trackTraj; %retrieve trajectories
+                xs(idx) = tracked_trajs(1,end);
+                ys(idx) = tracked_trajs(2,end);
+                zs(idx) = tracked_trajs(3,end);
+            end
+            GraphUtil.graphPtDistribution(xs,ys,zs,'b', true);
+
+            xs = zeros(length(arpod_stats));
+            ys = zeros(length(arpod_stats));
+            zs = zeros(length(arpod_stats));
+            for idx = 1:length(arpod_stats)
+                tracked_trajs = arpod_stats{idx}.trackTraj; %retrieve trajectories
+                xs(idx) = tracked_trajs(1,1);
+                ys(idx) = tracked_trajs(2,1);
+                zs(idx) = tracked_trajs(3,1);
+            end
+            GraphUtil.graphPtDistribution(xs,ys,zs,'r', false);
+            hold off
+        end
+
         function void = graphTranslationDist(arpod_stats)
             first_graph = true;
             for idx = 1:length(arpod_stats)
@@ -184,7 +210,7 @@ classdef GraphUtil
                 zs = zs(:);
                 plot3(xs,ys,zs,'Color',[rand,rand,rand]);
                 if first_graph
-                    axis equal
+                    %axis equal
                     hold on 
                     first_graph = false;
                 end
@@ -196,9 +222,10 @@ classdef GraphUtil
         function percentages = normalizeTrajectories(track_trajs)
             num_steps = length(track_trajs);
             distance = 0;
-            percentages = zeros(num_steps);
+            percentages = zeros(1,num_steps);
             for idx = 2:num_steps
-                distance = distance + sqrt(sum((track_trajs(idx) - track_trajs(idx-1)).^2));
+                %distance = distance + sqrt( sum( ((track_trajs(idx) - track_trajs(idx-1)).^2).' ) );
+                distance = distance + norm(track_trajs(idx) - track_trajs(idx-1));
                 percentages(idx) = distance;
             end
             percentages = percentages / distance;
@@ -206,17 +233,69 @@ classdef GraphUtil
         function void = graphTrajectorySpecial(arpod_stats)
             first_graph = true;
             sum_trajs = 0;
+            percent_trajs = [];
+            errors_ys = [];
             for idx = 1:length(arpod_stats)
                 track_trajs = arpod_stats{idx}.trackTraj;
                 %normalize trajectories (get x axis stuff)
-                percent_trajs = GraphUtil.normalizeTrajectories(track_trajs);
+                percent_traj = GraphUtil.normalizeTrajectories(track_trajs);
 
                 %get y axis stuff
-                arpod_stats{idx}.
-            end
+                errors_y = sum( (arpod_stats{idx}.trackEstTraj - arpod_stats{idx}.trackTraj).^2 );
 
-            %print x and y axis points as an error bar w/ stdev....
+                percent_trajs = [percent_trajs, percent_traj];
+                errors_ys = [errors_ys, errors_y];
+            end
+            GraphUtil.graph2dPt(percent_traj, errors_y,'r',first_graph);
+            hold off
+        end
+
+        function void = graphFuelBar(list_name_stats)
+            %this will create a boxcat graph of the fuel consumption
             
+            list_fuel_stats = [];
+            for idx = 1:length(list_name_stats)
+                load(list_name_stats(idx));
+                arpod_stats = savestats;
+                length(arpod_stats)
+                list_fuel_stats = [list_fuel_stats; zeros(1,length(arpod_stats))];
+            end
+            for idx = 1:length(list_name_stats)
+                load(list_name_stats(idx));
+                arpod_stats = savestats;
+                for idx_idx = 1:length(arpod_stats)
+                    list_fuel_stats(idx,idx_idx) = arpod_stats{idx_idx}.trackFuelConsumption(end);
+                end
+            end
+            xrange = linspace(1,length(list_name_stats),length(list_name_stats));
+            boxchart(list_fuel_stats.')
+            
+        end
+
+        function void = graphRuntimeBar(list_name_stats)
+            list_runtime_stats = [];
+            for idx = 1:length(list_name_stats)
+                load(list_name_stats(idx));
+                arpod_stats = savestats;
+
+                runtime_stats = [];
+                for idx_idx = 1:length(arpod_stats)
+                    runtime_stats = [runtime_stats, arpod_stats{idx_idx}.estimation_ts*1000];
+                end
+                isout = isoutlier(runtime_stats, 'quartiles');
+                runtime_stats(isout) = NaN;
+                if length(list_runtime_stats) > 0
+                    if length(list_runtime_stats) > length(runtime_stats)
+                        dist = length(list_runtime_stats) - length(runtime_stats);
+                        runtime_stats = [runtime_stats, NaN(1,dist)];
+                    elseif length(list_runtime_stats) < length(runtime_stats)
+                        [row,col] = size(list_runtime_stats);
+                        list_runtime_stats = [list_runtime_stats, NaN(row,length(runtime_stats)-col)];
+                    end
+                end
+                list_runtime_stats = [list_runtime_stats; runtime_stats];
+            end
+            boxchart(list_runtime_stats.');
         end
         %%%%% END OF UTIL CODE %%%%%
     end
