@@ -16,16 +16,16 @@
 delete(gcp('nocreate'))
 
 n_workers = 8;
-mc_length = 50;
+mc_length = 100;
 
 
-start_phase = 1;
+start_phase = 2;
 
 % 1 = EKF
 % 2 = PF
 % 3 = constrained MHE
 % 4 = unconstrained MHE
-estimatorOption = 1;
+estimatorOption = 2;
 
 % turn process disturbance on or off
 process_disturbance_on = 1; % 0 is off, 1 is on
@@ -48,7 +48,6 @@ end
 tic
 f_schedules(1:mc_length) = parallel.FevalFuture;
 for i = 1:mc_length
-    %savedstats{i} = Simulation_Function(1, estimatorOption, 1, process_disturbance_on, sensor_disturbance_on);
     f_schedules(i) = parfeval(pool, @Simulation_Function, 1, estimatorOption, start_phase, process_disturbance_on, sensor_disturbance_on);
 end
 
@@ -59,7 +58,7 @@ for idx = 1:mc_length
     fprintf('Index %d finished\n', completed_idx);
 end
 toc
-
-save('loaded_data/test');
+    
+save('loaded_data/PF_pd2');
 delete(gcp('nocreate'))
 clear

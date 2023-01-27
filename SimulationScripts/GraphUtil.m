@@ -45,19 +45,25 @@ classdef GraphUtil
             set(groot,'defaulttextinterpreter','latex');
             set(groot,'defaultLegendInterpreter','latex');
         end
-        function void = graphTarget()
+        function void = graphTarget(first_graph)
             [x,y,z] = sphere(10);
             r = ARPOD_Benchmark.rho_r;
             scatter3(r*x(:),r*y(:),r*z(:), 5,'o', 'filled', 'MarkerEdgeColor', 'c');
-            hold on
+
+            if first_graph
+                hold on
+            end
             [x,y,z] = sphere(5);
             r = ARPOD_Benchmark.rho_d;
             scatter3(r*x(:),r*y(:),r*z(:), 5, 'o', 'filled', 'MarkerEdgeColor', 'm');
 
             theta1 = 60 * pi / 180;
             theta2 = theta1;
-            c = ARPOD_Benchmark.c.';
+            c = ARPOD_Benchmark.rho_d;
+            %drawing pillars of pyramid
+            %plot3([0,-sin(theta2/2)*c], [0,-sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
             plot3([0,-cos(theta1/2)*c], [0,-sin(theta2/2)*c], [0,-sin(theta1/2)*c], 'g');
+
             %plot3([0,-sin(theta2/2)*c], [0,sin(theta1/2)*c], [0,-cos(theta1/2)*c], 'g');
             plot3([0,-cos(theta1/2)*c], [0,sin(theta1/2)*c], [0,-sin(theta2/2)*c], 'g');
 
@@ -79,7 +85,6 @@ classdef GraphUtil
 
             %plot3([sin(theta2/2)*c, sin(theta2/2)*c], [-sin(theta1/2)*c, sin(theta1/2)*c], [-cos(theta1/2)*c,-cos(theta1/2)*c], 'g');
             plot3([-cos(theta1/2)*c,-cos(theta1/2)*c],[-sin(theta1/2)*c, sin(theta1/2)*c], [sin(theta2/2)*c, sin(theta2/2)*c], 'g');
-            hold off
             xlabel('X [m]');
             ylabel('Y [m]');
             zlabel('Z [m]');
@@ -94,7 +99,7 @@ classdef GraphUtil
                 z: list of z trajectories (1,length)
                 color: char -> 'r' is red 'b' is blue 'bl' is black
             %}
-            scatter3(x,y,z,color);
+            scatter3(x,y,z, color, 'filled');
             if first_graph
                 %axis equal
                 hold on
@@ -141,7 +146,11 @@ classdef GraphUtil
                 ys(idx) = tracked_trajs(2,1);
                 zs(idx) = tracked_trajs(3,1);
             end
+            axis equal
             GraphUtil.graphPtDistribution(xs,ys,zs,'r', true);
+            xlabel("X [km]");
+            ylabel("Y [km]");
+            zlabel("Z [km]");
             hold off
         end
 
@@ -158,11 +167,15 @@ classdef GraphUtil
                 ys(idx) = tracked_trajs(2,end);
                 zs(idx) = tracked_trajs(3,end);
             end
+            axis equal
             GraphUtil.graphPtDistribution(xs,ys,zs,'b', true);
+            xlabel("X [km]");
+            ylabel("Y [km]");
+            zlabel("Z [km]");
             hold off
-        end
+        end 
 
-        function void = graphStartFinishDistribution(arpod_stats)
+        function void = graphStartFinishDistribution(arpod_stats, first_graph)
             xs = zeros(length(arpod_stats));
             ys = zeros(length(arpod_stats));
             zs = zeros(length(arpod_stats));
@@ -172,7 +185,11 @@ classdef GraphUtil
                 ys(idx) = tracked_trajs(2,end);
                 zs(idx) = tracked_trajs(3,end);
             end
-            GraphUtil.graphPtDistribution(xs,ys,zs,'b', true);
+
+            scatter3(xs,ys,zs, 'b', 'filled');
+            if first_graph
+                hold on
+            end
 
             xs = zeros(length(arpod_stats));
             ys = zeros(length(arpod_stats));
@@ -183,12 +200,19 @@ classdef GraphUtil
                 ys(idx) = tracked_trajs(2,1);
                 zs(idx) = tracked_trajs(3,1);
             end
-            GraphUtil.graphPtDistribution(xs,ys,zs,'r', false);
+
+            if first_graph
+                hold on
+            end
+            scatter3(xs,ys,zs, 'r', 'filled');
+
+            xlabel("X [km]");
+            ylabel("Y [km]");
+            zlabel("Z [km]");
             hold off
         end
 
-        function void = graphTranslationDist(arpod_stats)
-            first_graph = true;
+        function void = graphTranslationDist(arpod_stats, first_graph)  
             for idx = 1:length(arpod_stats)
                 track_trajs = arpod_stats{idx}.trackTraj;
                 xs = track_trajs(1,:);
@@ -226,7 +250,7 @@ classdef GraphUtil
             hold off
         end
 
-        function void = graph2DViewMission(arpod_stat)
+        function void = graph2DViewMission(arpod_stat, title_)
             trackTraj = arpod_stat.trackTraj;
             trackU = [arpod_stat.trackU, arpod_stat.trackU(:,end)];
             xs = trackTraj(1,:);
@@ -242,27 +266,114 @@ classdef GraphUtil
             uzs = trackU(3,:);
 
             ts = arpod_stat.timestamps;
-
             subplot(3,1,1)
-            plot(ts, xs, 'r');
+            plot(ts, xs, 'r','DisplayName','x');
             hold on
-            plot(ts,ys,'g');
-            plot(ts,zs,'b');
+            plot(ts,ys,'g','DisplayName','y');
+            plot(ts,zs,'b','DisplayName','z');
+            legend('x','y','z');
             hold off
 
             subplot(3,1,2)
-            plot(ts, vxs, 'r');
+            plot(ts, vxs, 'r','DisplayName','vx');
             hold on
-            plot(ts,vys,'g');
-            plot(ts,vzs,'b');
+            plot(ts,vys,'g','DisplayName','vy');
+            plot(ts,vzs,'b','DisplayName','vz');
+            legend('vx','vy','vz');
             hold off
 
             subplot(3,1,3)
-            plot(ts, uxs, 'r');
+            plot(ts, uxs, 'r','DisplayName','ux');
             hold on
-            plot(ts,uys,'g');
-            plot(ts,uzs,'b');
+            plot(ts,uys,'g','DisplayName','uy');
+            plot(ts,uzs,'b','DisplayName','uz');
+            legend('ux','uy','uz');
             hold off
+        end
+
+        function void = graph2DViewMissions(arpod_stats,title_,folder,save)
+            
+            figure;
+            first_graph = true;
+            for i = 1:length(arpod_stats)
+                arpod_stat = arpod_stats{i};
+                ts = arpod_stat.timestamps*0.33;
+                trackTraj = arpod_stat.trackTraj;
+                xs = trackTraj(1,:);
+                ys = trackTraj(2,:);
+                zs = trackTraj(3,:);
+
+                plot(ts, xs, 'r');
+                if first_graph
+                    first_graph = false;
+                    hold on
+                end
+                plot(ts,ys,'g');
+                plot(ts,zs,'b');
+            end
+            legend('x','y','z');
+            xlabel('Time [s]');
+            ylabel('Pos [km]');
+            title(title_+" Position");
+            hold off
+
+            if save
+                saveas(gcf,folder+title_+'_2d_pos.eps','epsc');
+            end
+
+            figure;
+            first_graph = true;
+            for i = 1:length(arpod_stats)
+                arpod_stat = arpod_stats{i};
+                ts = arpod_stat.timestamps*0.33;
+                trackTraj = arpod_stat.trackTraj;
+                vxs = trackTraj(4,:);
+                vys = trackTraj(5,:);
+                vzs = trackTraj(6,:);
+
+                plot(ts, vxs, 'r');
+                if first_graph
+                    first_graph = false;
+                    hold on
+                end
+                plot(ts,vys,'g');
+                plot(ts,vzs,'b');
+            end
+            legend('vx','vy','vz');
+            xlabel('Time [s]');
+            ylabel('Velocity [km/s]');
+            title(title_+" Velocity");
+            hold off
+            if save
+                saveas(gcf,folder+title_+'_2d_vel.eps','epsc');
+            end
+
+            figure;
+            first_graph = true;
+            for i = 1:length(arpod_stats)
+                arpod_stat = arpod_stats{i};
+                ts = arpod_stat.timestamps*0.33;
+                trackU = [arpod_stat.trackU, arpod_stat.trackU(:,end)];
+                uxs = trackU(1,:);
+                uys = trackU(2,:);
+                uzs = trackU(3,:);
+
+                plot(ts, uxs, 'r');
+                if first_graph
+                    first_graph = false;
+                    hold on
+                end
+                plot(ts,uys,'g');
+                plot(ts,uzs,'b');
+            end
+            legend('ux','uy','uz');
+            xlabel('Time [s]');
+            ylabel('Thrust [km/s^2]');
+            title(title_+" Thrust");
+            hold off
+            if save
+                saveas(gcf,folder+title_+'_2d_thr.eps','epsc');
+            end
         end
 
         function percentages = normalizeTrajectories(track_trajs)
@@ -276,7 +387,7 @@ classdef GraphUtil
             end
             percentages = percentages / distance;
         end
-        function void = graphTrajectorySpecial(arpod_stats)
+        function void = graphErrorSpecial(arpod_stats)
             first_graph = true;
             sum_trajs = 0;
             percent_trajs = [];
@@ -295,6 +406,50 @@ classdef GraphUtil
             GraphUtil.graph2dPt(percent_traj, errors_y,'r',first_graph);
             hold off
         end
+        
+        function void = graphDeltaFuelSpecial(arpod_stats)
+            first_graph = true;
+            sum_trajs = 0;
+            percent_trajs = [];
+            fuel_ys = [];
+            for idx = 1:length(arpod_stats)
+                track_trajs = arpod_stats{idx}.trackTraj;
+                track_fuel = arpod_stats{idx}.trackFuelConsumption;
+                %normalize trajectories (get x axis stuff)
+                percent_traj = GraphUtil.normalizeTrajectories(track_trajs);
+                kernel = [1,-1];
+                %get y axis stuff
+                track_fuel = conv(track_fuel,kernel,"same");
+                track_fuel = track_fuel(:,1:end-1);
+
+                percent_trajs = [percent_trajs, percent_traj];
+                fuel_ys = [fuel_ys, track_fuel];
+            end
+            GraphUtil.graph2dPt(percent_traj, errors_y,'r',first_graph);
+            hold off
+        end
+
+        function void = graphDeltaErrorSpecial(arpod_stats)
+            first_graph = true;
+            sum_trajs = 0;
+            percent_trajs = [];
+            errors_ys = [];
+            for idx = 1:length(arpod_stats)
+                track_trajs = arpod_stats{idx}.trackTraj;
+                %normalize trajectories (get x axis stuff)
+                percent_traj = GraphUtil.normalizeTrajectories(track_trajs);
+                kernel = [1,-1];
+                
+                %get y axis stuff
+                errors_y = sum( (arpod_stats{idx}.trackEstTraj - arpod_stats{idx}.trackTraj).^2 );
+                errors_y = conv(errors_y,kernel,"same"); %run convolution to get delta
+
+                percent_trajs = [percent_trajs, percent_traj];
+                errors_ys = [errors_ys, errors_y];
+            end
+            GraphUtil.graph2dPt(percent_traj, errors_y,'r',first_graph);
+            hold off
+        end
 
         function void = graphFuelBar(list_name_stats)
             %this will create a boxcat graph of the fuel consumption
@@ -302,31 +457,51 @@ classdef GraphUtil
             list_fuel_stats = [];
             for idx = 1:length(list_name_stats)
                 load(list_name_stats(idx));
-                arpod_stats = savestats;
-                length(arpod_stats)
+                arpod_stats = savedstats;
                 list_fuel_stats = [list_fuel_stats; zeros(1,length(arpod_stats))];
             end
-            for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
-                arpod_stats = savestats;
+            for yolo_idx = 1:length(list_name_stats)
+                load(list_name_stats(yolo_idx));
+                arpod_stats = savedstats;
                 for idx_idx = 1:length(arpod_stats)
-                    list_fuel_stats(idx,idx_idx) = arpod_stats{idx_idx}.trackFuelConsumption(end);
+                    list_fuel_stats(yolo_idx,idx_idx) = arpod_stats{idx_idx}.trackFuelConsumption(end) * ARPOD_Benchmark.m_c;
                 end
             end
-            xrange = linspace(1,length(list_name_stats),length(list_name_stats));
-            boxchart(list_fuel_stats.')
+            boxchart(list_fuel_stats.');
+        end
+
+        function void = graphFuelBarPhase(list_name_stats, phase)
+            %this will create a boxcat graph of the fuel consumption
             
+            list_fuel_stats = [];
+            for idx = 1:length(list_name_stats)
+                load(list_name_stats(idx));
+                arpod_stats = savedstats;
+                list_fuel_stats = [list_fuel_stats; zeros(1,length(arpod_stats))];
+            end
+            for yolo_idx = 1:length(list_name_stats)
+                load(list_name_stats(yolo_idx));
+                arpod_stats = savedstats;
+                for idx_idx = 1:length(arpod_stats)
+                    idxPhase = find(arpod_stats{idx_idx}.trackPhase==phase);
+                    fuel_phase = arpod_stats{idx_idx}.trackFuelConsumption(idxPhase);
+                    if length(fuel_phase) ~= 0
+                        list_fuel_stats(yolo_idx,idx_idx) = fuel_phase(end) * ARPOD_Benchmark.m_c;
+                    end
+                end
+            end
+            boxchart(list_fuel_stats.');
         end
 
         function void = graphRuntimeBar(list_name_stats)
             list_runtime_stats = [];
             for idx = 1:length(list_name_stats)
                 load(list_name_stats(idx));
-                arpod_stats = savestats;
-
+                arpod_stats = savedstats;
+                folder = "Graphs2/Base/";
                 runtime_stats = [];
                 for idx_idx = 1:length(arpod_stats)
-                    runtime_stats = [runtime_stats, arpod_stats{idx_idx}.estimation_ts*1000];
+                    runtime_stats = [runtime_stats, arpod_stats{idx_idx}.estimation_ts*0.33*1000];
                 end
                 isout = isoutlier(runtime_stats, 'quartiles');
                 runtime_stats(isout) = NaN;
@@ -343,30 +518,90 @@ classdef GraphUtil
             end
             boxchart(list_runtime_stats.');
         end
-
-        function void = DockSuccessBar(list_name_stats)
-
-            success_rates = zeros(1,length(list_name_stats));
+        function void = graphRuntimeBarPhase(list_name_stats, phase)
+            list_runtime_stats = [];
             for idx = 1:length(list_name_stats)
                 load(list_name_stats(idx));
-                arpod_stats = savestats;
-                
-                success_rate = 0.0;
-                
-                for idx_idx = 1:length(arpod_stats)
-                    estTraj = arpod_stats{idx_idx}.trackTraj(1:3,end);
-                    lastPhase = arpod_stats{idx_idx}.trackPhase(end);
+                arpod_stats = savedstats;
 
-                    if sqrt(estTraj(1).^2 + estTraj(2).^2 + estTraj(3).^2) < 1e-3
-                        success_rate = success_rate + 1;
+                runtime_stats = [];
+                for idx_idx = 1:length(arpod_stats)
+                    idxPhase = find(arpod_stats{idx_idx}.trackPhase==phase);
+                    time_phase = arpod_stats{idx_idx}.estimation_ts(idxPhase);
+                    runtime_stats = [runtime_stats, time_phase*0.33*1000];
+                end
+                isout = isoutlier(runtime_stats, 'quartiles');
+                runtime_stats(isout) = NaN;
+                if length(list_runtime_stats) > 0
+                    if length(list_runtime_stats) > length(runtime_stats)
+                        dist = length(list_runtime_stats) - length(runtime_stats);
+                        runtime_stats = [runtime_stats, NaN(1,dist)];
+                    elseif length(list_runtime_stats) < length(runtime_stats)
+                        [row,col] = size(list_runtime_stats);
+                        list_runtime_stats = [list_runtime_stats, NaN(row,length(runtime_stats)-col)];
                     end
                 end
-                disp(success_rate)
-                disp(length(arpod_stats))
-                success_rate = double(success_rate) / double(length(arpod_stats));
-                success_rates(idx) = success_rate;
+                list_runtime_stats = [list_runtime_stats; runtime_stats];
             end
-            bar(success_rates);
+            boxchart(list_runtime_stats.');
+        end
+        function void = DockSuccessBar(list_name_stats)
+
+            ys = [];
+            for idx__ = 1:length(list_name_stats)
+                load(list_name_stats(idx__));
+                arpod_stats = savedstats;
+
+                error_ys = [];
+                for idx_idx = 1:length(arpod_stats)
+                    sos = sum((arpod_stats{idx_idx}.trackEstTraj-arpod_stats{idx_idx}.trackTraj).^2)/6;
+                    error_ys = [error_ys, sos];
+                end
+                isout = isoutlier(error_ys, 'quartiles');
+                error_ys(isout) = NaN;
+                if length(ys) > 0
+                    if length(ys) > length(error_ys)
+                        dist = length(ys) - length(error_ys);
+                        error_ys = [error_ys, NaN(1,dist)];
+                    elseif length(ys) < length(error_ys)
+                        [row,col] = size(ys);
+                        ys = [ys, NaN(row,length(error_ys)-col)];
+                    end
+                end
+                ys = [ys; error_ys];
+            end
+            boxchart(ys.');
+        end
+
+        function void = ErrorPhaseBar(list_name_stats, phase)
+
+            ys = [];
+            for idx__ = 1:length(list_name_stats)
+                load(list_name_stats(idx__));
+                arpod_stats = savedstats;
+
+                error_ys = [];
+                for idx_idx = 1:length(arpod_stats)
+                    idxPhase = find(arpod_stats{idx_idx}.trackPhase==phase);
+
+                    sos = sum((arpod_stats{idx_idx}.trackEstTraj-arpod_stats{idx_idx}.trackTraj).^2)/6;
+                    sos = sos(idxPhase);
+                    error_ys = [error_ys, sos];
+                end
+                isout = isoutlier(error_ys, 'quartiles');
+                error_ys(isout) = NaN;
+                if length(ys) > 0
+                    if length(ys) > length(error_ys)
+                        dist = length(ys) - length(error_ys);
+                        error_ys = [error_ys, NaN(1,dist)];
+                    elseif length(ys) < length(error_ys)
+                        [row,col] = size(ys);
+                        ys = [ys, NaN(row,length(error_ys)-col)];
+                    end
+                end
+                ys = [ys; error_ys];
+            end
+            boxchart(ys.');
         end
         %%%%% END OF UTIL CODE %%%%%
     end

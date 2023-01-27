@@ -33,15 +33,23 @@ FuelConsumption = [];
 % 2 = PF
 % 3 = constrained MHE
 % 4 = unconstrained MHE
-estimatorOption = 1;
+estimatorOption = 4;
 
 % turn process disturbance on or off
 process_disturbance_on = 1; % 0 is off, 1 is on
+
+sensor_disturbance_on = 1;
 
 if process_disturbance_on
     process_disturbance = 1e-5*[1,1,1,1e-20,1e-20,1e-20];
 else
     process_disturbance = 0*[1,1,1,1e-20,1e-20,1e-20];
+end
+
+if sensor_disturbance_on
+    sensor_disturbance = 1e-3*[1,1,1];
+else
+    sensor_disturbance = 0*[1,1,1];
 end
 
 for i = 1:monteCarlo_Length
@@ -89,7 +97,7 @@ for i = 1:monteCarlo_Length
     
     
         
-    stats = Benchmark([x;y;z;vx;vy;vz],estimatorOption,process_disturbance,0,0);
+    stats = Benchmark([x;y;z;vx;vy;vz],estimatorOption,process_disturbance,0,sensor_disturbance);
 
     idxPhase1 = find(stats.trackPhase==1);
     idxPhase2 = find(stats.trackPhase==2);
@@ -316,3 +324,6 @@ disp("      timeMean:" + FuelConsumptionMean)
 disp("      timeMax:" + FuelConsumptionMax)
 disp("      timeMin:" + FuelConsumptionMin)
 disp("      timeStd:" + FuelConsumptionStd)
+
+
+save("test");

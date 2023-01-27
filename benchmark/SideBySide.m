@@ -1,27 +1,3 @@
-%{
-    MPC Benchmark Script
-    --------------------
-        Description:
-        ------------
-            Given choice of Particle Filter, Extended Kalman Filter, and
-            Moving Horizon Estimator, follow and estimate trajectory using
-            Moving Horizon Estimator.
-
-            Graph should give the estimated trajectory 
-
-
-        Tests: different phases
-                init MHE    
-                write a script to comapre all estimators in a side-by-side
-                monte carlo trajectories 
-                write stuff into a file
-                plot the stuff in file for side-by-side comparison
-                use file names + values for automated mc
-
-
-                packet dropouts
-                packet delay
-%}
 close all
 clear
 clc

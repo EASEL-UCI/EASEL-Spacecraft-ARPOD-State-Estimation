@@ -62,7 +62,7 @@ function stats = Benchmark(traj, stateEstimatorOption, process_noise, process_no
             seR = diag([0.001,0.001,0.001]);
         else
             seQ = diag(zeros(1,6)+process_noise);
-            seR = diag([0.001,0.001,0.001]);
+            seR = 1e-3*diag([0.001,0.001,0.001]);
         end
     elseif (stateEstimatorOption == 2)
         %PF
@@ -104,7 +104,7 @@ function stats = Benchmark(traj, stateEstimatorOption, process_noise, process_no
         else
             seQ = max(process_noise(:)).^(-1)*diag([1,1,1,1,1,1]); %arbitrarily large
         end
-        seR = diag([1e3, 1e3, 1e2]);
+        seR = 1e5*diag([1e3, 1e3, 1e2]);
     
         sense = ARPOD_Benchmark.sensor(traj, @() [0;0;0], phase);
         stateEstimator = stateEstimator.init(traj, sense, mhe_horizon, tstep);
@@ -193,6 +193,14 @@ function stats = Benchmark(traj, stateEstimatorOption, process_noise, process_no
         sense = ARPOD_Benchmark.sensor(traj,noiseR,phase);
     
         %given sensor reading read EKF
+        if stateEstimatorOption == 1 && phase == 1
+            seQ = 1e-20*diag([1,1,1,1,1,1]);
+            seR = diag([0.001,0.001,0.001]);
+        elseif stateEstimatorOption == 1 && phase >= 2
+            seQ = diag(zeros(1,6)+process_noise);
+            seR = 1e-10*diag([0.001,0.001,0.001]);
+        end
+
         tic
         if stateEstimatorOption >= 3 && stateEstimatorOption < 5 && i <= mhe_horizon*(tstep+1)
             ekf = ekf.estimate(u,sense,ekfQ,ekfR,tstep,phase);
