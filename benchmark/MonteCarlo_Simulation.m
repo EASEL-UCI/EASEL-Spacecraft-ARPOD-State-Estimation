@@ -15,6 +15,7 @@ phase2Error = [];
 phase3Error = [];
 error = [];
 
+estimatorOption = 1;
 
 fuelConsumption = [];
 mission_times = [];
@@ -186,4 +187,4 @@ disp("      missionMax:" + missionMax)
 disp("      missionMin:" + missionMin)
 disp("      missionStd:" + missionStd)
 
-save('PF_1');
+save('testc');

@@ -2,6 +2,10 @@
 
 classdef nonlinearChaserDynamics
     methods (Static)
+        function traj = EllipticMotion(t,traj0,R,u,e)
+            %e = eccentricity
+            
+        end
         function traj = ChaserMotion(t,traj0,R,u)
             %{
                 Constants:

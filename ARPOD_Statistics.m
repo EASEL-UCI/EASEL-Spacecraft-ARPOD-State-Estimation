@@ -68,7 +68,7 @@ classdef ARPOD_Statistics
             scatter3(r*x(:),r*y(:),r*z(:), 5,'o', 'filled', 'MarkerEdgeColor', 'c');
             axis equal
             hold on
-            
+
             %draw phase 3 sphere boundary
             [x,y,z] = sphere(5);
             r = ARPOD_Benchmark.rho_d;
@@ -107,8 +107,8 @@ classdef ARPOD_Statistics
             plot3(obj.trackEstTraj(1,:), obj.trackEstTraj(2,:), obj.trackEstTraj(3,:), 'b');
 
 
-            plot3(obj.trackEstTraj(1,end), obj.trackEstTraj(2,end), obj.trackEstTraj(3,end), 'bo', 'MarkerSize', 20);
-            plot3(obj.trackTraj(1,end), obj.trackTraj(2,end), obj.trackTraj(3,end), 'ro', 'MarkerSize', 20);
+            plot3(obj.trackEstTraj(1,end), obj.trackEstTraj(2,end), obj.trackEstTraj(3,end), 'b', 'MarkerSize', 20);
+            plot3(obj.trackTraj(1,end), obj.trackTraj(2,end), obj.trackTraj(3,end), 'r', 'MarkerSize', 20);
             %draw target position
             %draw chaserStart
             %draw chaserEnd
