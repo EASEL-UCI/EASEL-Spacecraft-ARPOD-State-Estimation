@@ -40,8 +40,22 @@ min\{fuel\} & Ns & - & - & - & - & - & - & - & - & -   & 39 & 36.4 & 45.3  \\
 \end{table}
 %}
 
-function table_str = CreateTable(list_name_stats, phase2_start_bool)
-    numbers_str = "";
+function table_str = CreateTable(graph_num)
+    file = "loaded_data/";
+
+    if graph_num == 1
+        modif = "_d.mat";
+        phase2_start_bool = false;
+    elseif graph_num == 2
+        modif = "_pd.mat";
+        phase2_start_bool = false;
+    elseif graph_num == 3
+        modif = "_pd2.mat";
+        phase2_start_bool = true;
+    else
+        error('OOF');
+    end
+    list_name_stats = [file+"EKF"+modif, file+"PF"+modif, file+"MHE"+modif];
     %the meat of the table
     idxEntirePhase1 = cell(3,1);
     idxEntirePhase2 = cell(3,1);
@@ -70,75 +84,101 @@ function table_str = CreateTable(list_name_stats, phase2_start_bool)
             stats = savedstats{j};
             phases = [phases, stats.trackPhase];
             
-            mse = ((stats.trackTraj-stats.trackEstTraj).^2)/3;
-            XdotError{m} = [XdotError{m}, sum(mse(4:6,:))];
-            XError{m} = [XError{m}, sum(mse(1:3,:)) ];
+            % mse = ((stats.trackTraj-stats.trackEstTraj).^2)/3;
+            gt = stats.trackTraj;
+            est = stats.trackEstTraj;
+
+            phase_ = stats.trackPhase;
+            mse_pos = sqrt(mean(vecnorm(gt(1:3,:) - est(1:3,:))).^2);
+            mse_vel = sqrt(mean(vecnorm(gt(4:6,:) - est(4:6,:))).^2);
+
+            mse_pos1 = sqrt(mean(vecnorm(gt(1:3,phase_==1) - est(1:3,phase_==1))).^2);
+            mse_vel1 = sqrt(mean(vecnorm(gt(4:6,phase_==1) - est(4:6,phase_==1))).^2);
+
+            mse_pos2 = sqrt(mean(vecnorm(gt(1:3,phase_==2) - est(1:3,phase_==2))).^2);
+            mse_vel2 = sqrt(mean(vecnorm(gt(4:6,phase_==2) - est(4:6,phase_==2))).^2);
+
+            mse_pos3 = sqrt(mean(vecnorm(gt(1:3,phase_==3) - est(1:3,phase_==3))).^2);
+            mse_vel3 = sqrt(mean(vecnorm(gt(4:6,phase_==3) - est(4:6,phase_==3))).^2);
+
+            stack = [mse_pos; mse_pos1; mse_pos2;mse_pos3];
+            stack_vel = [mse_vel; mse_vel1; mse_vel2; mse_vel3];
+            XdotError{m} = [XdotError{m}, stack_vel];
+            XError{m} = [XError{m}, stack];
         
             times{m} = [times{m}, stats.estimation_ts];
             mission_times{m} = [mission_times{m}, stats.timestamps(end)];
             fuelConsumption{m} = [fuelConsumption{m}, stats.trackFuelConsumption(end)];
         end
-        XError{m} = sqrt(XError{m} * 1e6);
-        XdotError{m} = sqrt(XdotError{m} * 1e6);
+        % XError{m} = XError{m};
+        % XdotError{m} = XdotError{m};
+        % XError -> [stack, stack,....] stack = [error,errorp1,e]
 
         idxEntirePhase1{m} = find(phases==1);
         idxEntirePhase2{m} = find(phases==2);
         idxEntirePhase3{m} = find(phases==3);
     end
+    numbers_str = "";
     numbers_str = numbers_str + "\\hline\n";
-
     numbers_str = numbers_str + "mean\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@mean, false);
+    % numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@mean, false);
+    numbers_str = numbers_str + Helper2(XError, @mean);
     
     numbers_str = numbers_str + "stdev\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@std, false);
+    % numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@std, false);
+    numbers_str = numbers_str + Helper2(XError, @std);
     numbers_str = numbers_str + "max\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@max, false);
+    % numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@max, false);
+    numbers_str = numbers_str + Helper2(XError, @max);
     numbers_str = numbers_str + "min\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@min, false);
+    % numbers_str = numbers_str + Helper(XError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@min, false);
+    numbers_str = numbers_str + Helper2(XError, @min);
 
     numbers_str = numbers_str + "\\hline\n";
 
-    numbers_str = numbers_str + "mean\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@mean, false);
-    numbers_str = numbers_str + "stdev\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@std, false);
-    numbers_str = numbers_str + "max\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@max, false);
-    numbers_str = numbers_str + "min\\{E$(\\x$)\\} & m ";
-    numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@min, false);
-
+    numbers_str = numbers_str + "mean\\{E$(\\x$)\\} & $\\frac{m}{s}$ ";
+    % numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@mean, false);
+    numbers_str = numbers_str + Helper2(XdotError, @mean);
+    numbers_str = numbers_str + "stdev\\{E$(\\x$)\\} & $\\frac{m}{s}$ ";
+    % numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@std, false);
+    numbers_str = numbers_str + Helper2(XdotError, @std);
+    numbers_str = numbers_str + "max\\{E$(\\x$)\\} & $\\frac{m}{s}$ ";
+    % numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@max, false);
+    numbers_str = numbers_str + Helper2(XdotError, @max);
+    numbers_str = numbers_str + "min\\{E$(\\x$)\\} & $\\frac{m}{s}$ ";
+    % numbers_str = numbers_str + Helper(XdotError, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@min, false);
+    numbers_str = numbers_str + Helper2(XdotError, @min);
     numbers_str = numbers_str + "\\hline\n";
 
-    numbers_str = numbers_str + "mean\\{c.t.\\} & m ";
+    numbers_str = numbers_str + "mean\\{c.t.\\} & s ";
     numbers_str = numbers_str + Helper(times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@mean, false);
-    numbers_str = numbers_str + "stdev\\{c.t.\\} & m ";
+    numbers_str = numbers_str + "stdev\\{c.t.\\} & s ";
     numbers_str = numbers_str + Helper(times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@std, false);
-    numbers_str = numbers_str + "max\\{c.t.\\} & m ";
+    numbers_str = numbers_str + "max\\{c.t.\\} & s ";
     numbers_str = numbers_str + Helper(times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@max, false);
-    numbers_str = numbers_str + "min\\{c.t.\\} & m ";
+    numbers_str = numbers_str + "min\\{c.t.\\} & s ";
     numbers_str = numbers_str + Helper(times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@min, false);
 
     numbers_str = numbers_str + "\\hline\n";
 
-    numbers_str = numbers_str + "mean\\{m.t.\\} & m ";
+    numbers_str = numbers_str + "mean\\{m.t.\\} & s ";
     numbers_str = numbers_str + Helper(mission_times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@mean, true);
-    numbers_str = numbers_str + "stdev\\{m.t.\\} & m ";
+    numbers_str = numbers_str + "stdev\\{m.t.\\} & s ";
     numbers_str = numbers_str + Helper(mission_times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@std, true);
-    numbers_str = numbers_str + "max\\{m.t.\\} & m ";
+    numbers_str = numbers_str + "max\\{m.t.\\} & s ";
     numbers_str = numbers_str + Helper(mission_times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@max, true);
-    numbers_str = numbers_str + "min\\{m.t.\\} & m ";
+    numbers_str = numbers_str + "min\\{m.t.\\} & s ";
     numbers_str = numbers_str + Helper(mission_times, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@min, true);
 
     numbers_str = numbers_str + "\\hline\n";
 
-    numbers_str = numbers_str + "mean\\{fuel\\} & m ";
+    numbers_str = numbers_str + "mean\\{fuel\\} & Ns ";
     numbers_str = numbers_str + Helper(fuelConsumption, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@mean, true);
-    numbers_str = numbers_str + "stdev\\{fuel\\} & m ";
+    numbers_str = numbers_str + "stdev\\{fuel\\} & Ns ";
     numbers_str = numbers_str + Helper(fuelConsumption, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@std, true);
-    numbers_str = numbers_str + "max\\{fuel\\} & m ";
+    numbers_str = numbers_str + "max\\{fuel\\} & Ns ";
     numbers_str = numbers_str + Helper(fuelConsumption, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@max, true);
-    numbers_str = numbers_str + "min\\{fuel\\} & m ";
+    numbers_str = numbers_str + "min\\{fuel\\} & Ns ";
     numbers_str = numbers_str + Helper(fuelConsumption, idxEntirePhase1,idxEntirePhase2,idxEntirePhase3,@min, true);
 
     numbers_str = numbers_str + "\\hline\n";

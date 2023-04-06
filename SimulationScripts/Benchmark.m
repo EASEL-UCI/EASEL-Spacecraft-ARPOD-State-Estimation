@@ -58,7 +58,7 @@ function stats = Benchmark(traj, stateEstimatorOption, process_noise, process_no
     
     % tunable parameters
         if sum(process_noise) == 0
-            seQ = 1e-5*diag([1,1,1,1,1,1]);
+            seQ = 1e-20*diag([1,1,1,1,1,1]);
             seR = diag([0.001,0.001,0.001]);
         else
             seQ = diag(zeros(1,6)+process_noise);

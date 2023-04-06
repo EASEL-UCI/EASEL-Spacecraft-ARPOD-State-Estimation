@@ -44,7 +44,7 @@ function nothing =  Distributed_Simulation(estimator,cases)
     end
     delete(gcp('nocreate'))
 
-    n_workers = 6;
+    n_workers = 7;
     mc_length = 100;
 
     % 1 = EKF

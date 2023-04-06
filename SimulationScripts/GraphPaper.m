@@ -35,12 +35,12 @@ function empty = GraphPaper(graph_num)
         %case 2
         modif = "_pd.mat";
         folder = "Graphs2/PD/";
-        bar_length = 650;
+        bar_length = 1000;
     elseif graph_num == 3
         %case3
         modif = "_pd2.mat";
         folder = "Graphs2/Start2/";
-        bar_length = 500;
+        bar_length = 300;
     else
         error('you done goofed');
     end
@@ -48,7 +48,7 @@ function empty = GraphPaper(graph_num)
     % folder = "Graphs2/Start2/";
     % modif = "_d.mat";
     % NO DISTURBANCE GRAPHS (STARTED PHASE 1)
-    load("loaded_data/EKF"+modif);
+    load("loaded_data/EKF"+modif, "-mat", "savedstats");
     %    EKF
     figure;
     GraphUtil.graphInitialDistribution(savedstats);
@@ -67,7 +67,7 @@ function empty = GraphPaper(graph_num)
     % folder = "Graphs2/Start2/";
     % modif = "_d.mat";
     %    PF
-    load("loaded_data/PF"+modif);
+    load("loaded_data/PF"+modif, "-mat", "savedstats");
     figure;
     GraphUtil.graphInitialDistribution(savedstats);
     title("PF Start");
@@ -79,10 +79,10 @@ function empty = GraphPaper(graph_num)
     title_ = "PF";
     GraphUtil.graph2DViewMissions(savedstats,title_,folder,true,bar_length);
 
-    folder = "Graphs2/Start2/";
-    modif = "_d.mat";
+    % folder = "Graphs2/Start2/";
+    % modif = "_d.mat";
     %    MHE
-    load("loaded_data/MHE"+modif);
+    load("loaded_data/MHE"+modif, "-mat", "savedstats");
     figure;
     GraphUtil.graphInitialDistribution(savedstats);
     title("MHE Start");
@@ -167,28 +167,28 @@ function empty = GraphPaper(graph_num)
     figure;
     GraphUtil.ErrorPhaseBar(files,1,true);
     title("RMSE Pos Error Graph Phase 1");
-    ylabel('RMSE Pos Error');
+    ylabel('RMSE Pos Error [m]');
     set(gca,'xticklabel',["EKF","PF","MHE"]);
     saveas(gcf,folder+'SoS_phase1.eps','epsc');
 
     figure;
     GraphUtil.ErrorPhaseBar(files,2,true);
     title("RMSE Pos Error Graph Phase 2");
-    ylabel('RMSE Pos Error');
+    ylabel('RMSE Pos Error [m]');
     set(gca,'xticklabel',["EKF","PF","MHE"]);
     saveas(gcf,folder+'SoS_phase2.eps','epsc');
 
     figure;
     GraphUtil.ErrorPhaseBar(files,3,true);
     title("RMSE Pos Error Graph Phase 3");
-    ylabel('RMSE Pos Error');
+    ylabel('RMSE Pos Error [m]');
     set(gca,'xticklabel',["EKF","PF","MHE"]);
     saveas(gcf,folder+'SoS_phase3.eps','epsc');
 
     figure;
     GraphUtil.DockSuccessBar(files,false);
     title("RMSE Vel Error Graph");
-    ylabel('RMSE Error');
+    ylabel('RMSE Error [m]');
     set(gca,'xticklabel',["EKF","PF","MHE"]);
     saveas(gcf,folder+'SoS_vel.eps','epsc');
 

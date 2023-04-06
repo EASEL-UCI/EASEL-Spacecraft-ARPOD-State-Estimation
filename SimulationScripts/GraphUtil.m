@@ -458,12 +458,12 @@ classdef GraphUtil
             
             list_fuel_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 list_fuel_stats = [list_fuel_stats; zeros(1,length(arpod_stats))];
             end
             for yolo_idx = 1:length(list_name_stats)
-                load(list_name_stats(yolo_idx));
+                load(list_name_stats(yolo_idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 for idx_idx = 1:length(arpod_stats)
                     list_fuel_stats(yolo_idx,idx_idx) = arpod_stats{idx_idx}.trackFuelConsumption(end) * ARPOD_Benchmark.m_c;
@@ -477,12 +477,12 @@ classdef GraphUtil
             
             list_fuel_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 list_fuel_stats = [list_fuel_stats; zeros(1,length(arpod_stats))];
             end
             for yolo_idx = 1:length(list_name_stats)
-                load(list_name_stats(yolo_idx));
+                load(list_name_stats(yolo_idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 for idx_idx = 1:length(arpod_stats)
                     idxPhase = find(arpod_stats{idx_idx}.trackPhase==phase);
@@ -498,13 +498,13 @@ classdef GraphUtil
         function void = graphRuntimeBar(list_name_stats)
             list_runtime_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
-                folder = "Graphs2/Base/";
                 runtime_stats = [];
                 for idx_idx = 1:length(arpod_stats)
                     runtime_stats = [runtime_stats, arpod_stats{idx_idx}.estimation_ts*1000];
                 end
+                disp(list_name_stats(idx) + "," + mean(runtime_stats*1000));
                 isout = isoutlier(runtime_stats, 'quartiles');
                 runtime_stats(isout) = NaN;
                 if length(list_runtime_stats) > 0
@@ -523,7 +523,7 @@ classdef GraphUtil
         function void = graphRuntimeBarPhase(list_name_stats, phase)
             list_runtime_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
 
                 runtime_stats = [];
@@ -558,7 +558,7 @@ classdef GraphUtil
 
             ys = [];
             for idx__ = 1:length(list_name_stats)
-                load(list_name_stats(idx__));
+                load(list_name_stats(idx__), "-mat", "savedstats");
                 arpod_stats = savedstats;
 
                 error_ys = [];
@@ -572,10 +572,11 @@ classdef GraphUtil
                         gt = gt(4:6,:);
                         est = est(4:6,:);
                     end
-                    gt = vecnorm(gt);
-                    est = vecnorm(est);
+                    % gt = vecnorm(gt);
+                    % est = vecnorm(est);
+                    sos = sqrt(mean(vecnorm(gt - est)).^2);
 
-                    sos = GraphUtil.calculateRMSE(est, gt).';
+                    % sos = GraphUtil.calculateRMSE(est, gt).';
                     error_ys = [error_ys, sos];
                 end
                 isout = isoutlier(error_ys, 'quartiles');
@@ -597,7 +598,7 @@ classdef GraphUtil
 
             ys = [];
             for idx__ = 1:length(list_name_stats)
-                load(list_name_stats(idx__));
+                load(list_name_stats(idx__), "-mat", "savedstats");
                 arpod_stats = savedstats;
 
                 error_ys = [];
@@ -616,10 +617,13 @@ classdef GraphUtil
                         est = est(4:6,:);
                     end
 
-                    gt = vecnorm(gt);
-                    est = vecnorm(est);
+                    % gt = vecnorm(gt);
+                    % est = vecnorm(est);
 
-                    sos = GraphUtil.calculateRMSE(est, gt).';
+                    % sos = GraphUtil.calculateRMSE(est, gt).';
+
+                    % err = vecnorm(gt - est);
+                    sos = sqrt(mean(vecnorm(gt - est)).^2);
                     error_ys = [error_ys, sos];
                 end
                 isout = isoutlier(error_ys, 'quartiles');
