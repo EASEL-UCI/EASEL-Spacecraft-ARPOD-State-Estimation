@@ -1,4 +1,3 @@
-
 %{
     TODO:
     ------
@@ -271,7 +270,7 @@ classdef GraphUtil
             hold on
             plot(ts,ys,'g','DisplayName','y');
             plot(ts,zs,'b','DisplayName','z');
-            legend('x','y','z');
+            legend('x','y','z');c
             hold off
 
             subplot(3,1,2)
@@ -291,13 +290,13 @@ classdef GraphUtil
             hold off
         end
 
-        function void = graph2DViewMissions(arpod_stats,title_,folder,save)
+        function void = graph2DViewMissions(arpod_stats,title_,folder,save,xlim_)
             
             figure;
             first_graph = true;
             for i = 1:length(arpod_stats)
                 arpod_stat = arpod_stats{i};
-                ts = arpod_stat.timestamps*0.33;
+                ts = arpod_stat.timestamps;
                 trackTraj = arpod_stat.trackTraj;
                 xs = trackTraj(1,:);
                 ys = trackTraj(2,:);
@@ -314,6 +313,7 @@ classdef GraphUtil
             legend('x','y','z');
             xlabel('Time [s]');
             ylabel('Pos [km]');
+            xlim([0,xlim_]);
             title(title_+" Position");
             hold off
 
@@ -325,7 +325,7 @@ classdef GraphUtil
             first_graph = true;
             for i = 1:length(arpod_stats)
                 arpod_stat = arpod_stats{i};
-                ts = arpod_stat.timestamps*0.33;
+                ts = arpod_stat.timestamps;
                 trackTraj = arpod_stat.trackTraj;
                 vxs = trackTraj(4,:);
                 vys = trackTraj(5,:);
@@ -343,6 +343,7 @@ classdef GraphUtil
             xlabel('Time [s]');
             ylabel('Velocity [km/s]');
             title(title_+" Velocity");
+            xlim([0,xlim_]);
             hold off
             if save
                 saveas(gcf,folder+title_+'_2d_vel.eps','epsc');
@@ -352,7 +353,7 @@ classdef GraphUtil
             first_graph = true;
             for i = 1:length(arpod_stats)
                 arpod_stat = arpod_stats{i};
-                ts = arpod_stat.timestamps*0.33;
+                ts = arpod_stat.timestamps;
                 trackU = [arpod_stat.trackU, arpod_stat.trackU(:,end)];
                 uxs = trackU(1,:);
                 uys = trackU(2,:);
@@ -370,6 +371,7 @@ classdef GraphUtil
             xlabel('Time [s]');
             ylabel('Thrust [km/s^2]');
             title(title_+" Thrust");
+            xlim([0,xlim_]);
             hold off
             if save
                 saveas(gcf,folder+title_+'_2d_thr.eps','epsc');
@@ -456,12 +458,12 @@ classdef GraphUtil
             
             list_fuel_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 list_fuel_stats = [list_fuel_stats; zeros(1,length(arpod_stats))];
             end
             for yolo_idx = 1:length(list_name_stats)
-                load(list_name_stats(yolo_idx));
+                load(list_name_stats(yolo_idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 for idx_idx = 1:length(arpod_stats)
                     list_fuel_stats(yolo_idx,idx_idx) = arpod_stats{idx_idx}.trackFuelConsumption(end) * ARPOD_Benchmark.m_c;
@@ -475,12 +477,12 @@ classdef GraphUtil
             
             list_fuel_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 list_fuel_stats = [list_fuel_stats; zeros(1,length(arpod_stats))];
             end
             for yolo_idx = 1:length(list_name_stats)
-                load(list_name_stats(yolo_idx));
+                load(list_name_stats(yolo_idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
                 for idx_idx = 1:length(arpod_stats)
                     idxPhase = find(arpod_stats{idx_idx}.trackPhase==phase);
@@ -496,13 +498,13 @@ classdef GraphUtil
         function void = graphRuntimeBar(list_name_stats)
             list_runtime_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
-                folder = "Graphs2/Base/";
                 runtime_stats = [];
                 for idx_idx = 1:length(arpod_stats)
-                    runtime_stats = [runtime_stats, arpod_stats{idx_idx}.estimation_ts*0.33*1000];
+                    runtime_stats = [runtime_stats, arpod_stats{idx_idx}.estimation_ts*1000];
                 end
+                disp(list_name_stats(idx) + "," + mean(runtime_stats*1000));
                 isout = isoutlier(runtime_stats, 'quartiles');
                 runtime_stats(isout) = NaN;
                 if length(list_runtime_stats) > 0
@@ -521,14 +523,14 @@ classdef GraphUtil
         function void = graphRuntimeBarPhase(list_name_stats, phase)
             list_runtime_stats = [];
             for idx = 1:length(list_name_stats)
-                load(list_name_stats(idx));
+                load(list_name_stats(idx), "-mat", "savedstats");
                 arpod_stats = savedstats;
 
                 runtime_stats = [];
                 for idx_idx = 1:length(arpod_stats)
                     idxPhase = find(arpod_stats{idx_idx}.trackPhase==phase);
                     time_phase = arpod_stats{idx_idx}.estimation_ts(idxPhase);
-                    runtime_stats = [runtime_stats, time_phase*0.33*1000];
+                    runtime_stats = [runtime_stats, time_phase*1000];
                 end
                 isout = isoutlier(runtime_stats, 'quartiles');
                 runtime_stats(isout) = NaN;
@@ -545,16 +547,36 @@ classdef GraphUtil
             end
             boxchart(list_runtime_stats.');
         end
-        function void = DockSuccessBar(list_name_stats)
+
+        function rmsef = calculateRMSE(est,gt)
+            % mxn where m = features and n = # of data points
+            %gt = ground truth
+            %est = estimated 
+            rmsef = rmse(est.',gt.');
+        end
+        function void = DockSuccessBar(list_name_stats, pos_bool)
 
             ys = [];
             for idx__ = 1:length(list_name_stats)
-                load(list_name_stats(idx__));
+                load(list_name_stats(idx__), "-mat", "savedstats");
                 arpod_stats = savedstats;
 
                 error_ys = [];
                 for idx_idx = 1:length(arpod_stats)
-                    sos = sum((arpod_stats{idx_idx}.trackEstTraj-arpod_stats{idx_idx}.trackTraj).^2)/6;
+                    est = arpod_stats{idx_idx}.trackEstTraj;
+                    gt = arpod_stats{idx_idx}.trackTraj;
+                    if pos_bool
+                        gt = gt(1:3,:);
+                        est = est(1:3,:);
+                    else
+                        gt = gt(4:6,:);
+                        est = est(4:6,:);
+                    end
+                    % gt = vecnorm(gt);
+                    % est = vecnorm(est);
+                    sos = sqrt(mean(vecnorm(gt - est)).^2);
+
+                    % sos = GraphUtil.calculateRMSE(est, gt).';
                     error_ys = [error_ys, sos];
                 end
                 isout = isoutlier(error_ys, 'quartiles');
@@ -572,20 +594,36 @@ classdef GraphUtil
             end
             boxchart(ys.');
         end
-
-        function void = ErrorPhaseBar(list_name_stats, phase)
+        function void = ErrorPhaseBar(list_name_stats, phase, pos_bool)
 
             ys = [];
             for idx__ = 1:length(list_name_stats)
-                load(list_name_stats(idx__));
+                load(list_name_stats(idx__), "-mat", "savedstats");
                 arpod_stats = savedstats;
 
                 error_ys = [];
                 for idx_idx = 1:length(arpod_stats)
                     idxPhase = find(arpod_stats{idx_idx}.trackPhase==phase);
 
-                    sos = sum((arpod_stats{idx_idx}.trackEstTraj-arpod_stats{idx_idx}.trackTraj).^2)/6;
-                    sos = sos(idxPhase);
+                    est = arpod_stats{idx_idx}.trackEstTraj;
+                    est = est(:,idxPhase);
+                    gt = arpod_stats{idx_idx}.trackTraj;
+                    gt = gt(:,idxPhase);
+                    if pos_bool
+                        gt = gt(1:3,:);
+                        est = est(1:3,:);
+                    else
+                        gt = gt(4:6,:);
+                        est = est(4:6,:);
+                    end
+
+                    % gt = vecnorm(gt);
+                    % est = vecnorm(est);
+
+                    % sos = GraphUtil.calculateRMSE(est, gt).';
+
+                    % err = vecnorm(gt - est);
+                    sos = sqrt(mean(vecnorm(gt - est)).^2);
                     error_ys = [error_ys, sos];
                 end
                 isout = isoutlier(error_ys, 'quartiles');
